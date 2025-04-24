@@ -63,11 +63,10 @@ cbuffer Lightning : register(b1)
 
 cbuffer Cascades : register(b2)
 {
-	float4x4 transformV[CascadesCount];
 	float4x4 transformVP[CascadesCount];
 	float4x4 transformS[CascadesCount];
 	float4 distances[CascadesCount / 4];
-	float4 objPos;
+	float4 playerPos;
 };
 
 Texture2D objTexture : TEXTURE : register(t0);
@@ -201,14 +200,14 @@ float4 PSMain( PS_IN input ) : SV_Target
 	
 		float4 amb, dif, spec;
 
-		int layer = 5;
+		int layer = CascadesCount;
 
 		float depthVal;
 		float distance;
 
 		for (int i = 0; i < CascadesCount; ++i)
 		{
-			depthVal = sqrt(pow(input.posW.x - objPos.x, 2) + pow(input.posW.z - objPos.z, 2));
+			depthVal = sqrt(pow(input.posW.x - playerPos.x, 2) + pow(input.posW.z - playerPos.z, 2));
 
 			switch (i % 4) {
 				case 0:
@@ -240,23 +239,37 @@ float4 PSMain( PS_IN input ) : SV_Target
 		ComputeDirectionalLight(input.mat, dirLight, input.norm, eyeVec, amb, dif, spec);
 
 		//Only for cascade shadows debugging
-		//#define COLORING
+		#define COLORING
 		
 		#ifdef COLORING
+		float4 cascadeColor;
 		if (layer == 0)
-			shadow = float4(1.0f, 0.0f, 0.0f, 0.0f);
+		{
+			cascadeColor = float4(1.0f, 0.5f, 0.5f, 1.0f);
+		}
 		else if (layer == 1)
-			shadow = float4(0.0f, 1.0f, 0.0f, 0.0f);
+		{
+			cascadeColor = float4(1.0f, 1.0f, 0.5f, 1.0f);
+		}
 		else if (layer == 2)
-			shadow = float4(0.0f, 0.0f, 1.0f, 0.0f);
+		{
+			cascadeColor = float4(0.5f, 1.0f, 0.5f, 1.0f);
+		}
 		else if (layer == 3)
-			shadow = float4(1.0f, 1.0f, 0.0f, 0.0f);
+		{
+			cascadeColor = float4(0.5f, 0.5f, 1.0f, 1.0f);
+		}
+
+		shadow *= cascadeColor;
+		amb *= cascadeColor;
 		#endif
+		
+		if (layer == CascadesCount)
+			shadow = 1.0f;
 
 		ambient += amb;
 		diffuse += dif * shadow;
 		specular += spec * shadow;
-
 		
         for (int i = 0; i < pointLightNum; ++i)
         {
@@ -269,14 +282,10 @@ float4 PSMain( PS_IN input ) : SV_Target
 		
 
         float4 matColor; 
-		matColor = col * (ambient + diffuse) + specular;
-        matColor.a = mat.diffuse.a;
+		matColor = col * ambient + diffuse + specular;
 		
-        col = matColor;
-		
-        //if (layer == -1)
-            //col = float4(0.0f, 0.0f, 0.0f, 0.0f);
-
+        col.xyz = matColor.xyz;
+		col.w = input.mat.ambient.w;
     }
 
 	return col;

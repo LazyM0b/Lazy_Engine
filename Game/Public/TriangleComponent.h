@@ -59,15 +59,15 @@ public:
 	UINT strides;
 	UINT offsets;
 	MeshTypes type;
-	std::vector <Vertex> points;
-	std::vector <int> indexes;
+	std::vector <Vertex>* points;
+	std::vector <shadowVertex>* shadowPoints;
+	std::vector <int>* indexes;
 	ID3D11Buffer* vertexBuffer;
 	ID3D11Buffer* indexBuffer;
 	ID3D11Buffer* objectPropsBuffer;
 	//SHADOWS
 	UINT shadowStrides;
 	UINT shadowOffsets;
-	std::vector <shadowVertex> shadowPoints;
 	ID3D11Buffer* shadowVertexBuffer;
 	//END
 };

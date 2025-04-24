@@ -60,10 +60,9 @@ struct shadowMapProps {
 		}
 	};
 
-	Matrix transformV[CascadesCount];
 	Matrix transformVP[CascadesCount];
 	Matrix transformS[CascadesCount];
 	Vector4 distances[CascadesCount / 4];
-	Vector4 objectPos;
+	Vector4 playerPos;
 };
 //END

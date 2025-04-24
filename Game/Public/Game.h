@@ -30,7 +30,8 @@ public:
 	void PrepareResources();
 	int MessageHandler(UINT msg);
 	void Run();
-	void Draw();
+	virtual void Draw();
+	virtual void DrawTransparent();
 	void PrepareFrame();
 	virtual void Update(float deltaTime);
 	void UpdateInternal(); //?
@@ -53,6 +54,7 @@ public:
 	static Game* instance;
 
 	std::vector<GameComponent*> objects;
+	std::vector<std::vector<GameComponent*>> transpObjects;
 	std::vector<MeshTypes> objectTypes;
 	std::vector<MaterialTypes> materialTypes;
 	ShadersComponent* shaders;
@@ -65,10 +67,14 @@ public:
 	ID3D11Texture2D* depthStencilBuffer;
 	ID3D11RenderTargetView* renderView;
 	ID3D11DepthStencilView* depthStencilView; 
+	ID3D11BlendState* blendState;
+
+	//LIGHT
 	ID3D11Buffer* lightBuf;
 	LightningData* lightBufData;
 	std::vector<Vector3> lightsPos;
-
+	//
+	
 	//SHADOWS
 	std::vector<ShadowMap*> shadowMaps;
 	BoundingSphere sceneBounds;
@@ -82,8 +88,9 @@ public:
 
 	std::chrono::time_point<std::chrono::steady_clock> PrevTime;
 	float totalTime = 0;
-	UINT LOD = 3;
+	UINT LOD = 1;
 	UINT frameCount = 0;
 	UINT clientWidth;
 	UINT clientHeight;
+	UINT mapSize;
 };

@@ -34,7 +34,6 @@ cbuffer Properties : register(b0)
 
 cbuffer Cascades : register(b1)
 {
-	float4x4 transformV[CascadesCount];
 	float4x4 transformVP[CascadesCount];
 	float4x4 transformS[CascadesCount];
 	float4 distances[CascadesCount / 4];

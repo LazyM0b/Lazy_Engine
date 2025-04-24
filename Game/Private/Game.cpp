@@ -96,6 +96,21 @@ void Game::PrepareResources() {
 	res = device->CreateDepthStencilView(depthStencilBuffer, 0, &depthStencilView);
 	context->OMSetRenderTargets(1, &renderView, depthStencilView);
 
+	D3D11_BLEND_DESC blendDesc;
+
+	blendDesc.AlphaToCoverageEnable = false;
+	blendDesc.IndependentBlendEnable = false;
+	blendDesc.RenderTarget[0].BlendEnable = true;
+	blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+	blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+	blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	res = device->CreateBlendState(&blendDesc, &blendState);
+
 	D3D11_BUFFER_DESC lightBufDesc = {};
 	lightBufDesc.Usage = D3D11_USAGE_DYNAMIC;
 	lightBufDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -229,6 +244,9 @@ void Game::Draw() {
 	context->ClearRenderTargetView(renderView, color);
 	shaders->Draw(context);
 
+	float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	context->OMSetBlendState(blendState, blendFactors, 0xffffffff);
+
 	/*for (auto object : objects)
 		object->Update(camManager);*/
 
@@ -243,11 +261,16 @@ void Game::Draw() {
 	context->Unmap(cascadeShadowPropsBuffer, 0);
 
 	for (auto object : objects) {
-		object->Draw(context, shadowMaps[0]);
+		//if (!object->isTransparent)
+			object->Draw(context, shadowMaps[0]);
 	}
-
 }
 
+
+void Game::DrawTransparent()
+{
+
+}
 
 //SHADOWS
 void Game::DrawSceneToShadowMap()
@@ -487,9 +510,8 @@ void Game::BuildShadowTransform()
 
 		Matrix S = V * P * T;
 
-		radius /= 2.0f;
+		radius /= 2.5f;
 
-		V.Transpose(shadowMapProperties->transformV[i]);
 		(V * P).Transpose(shadowMapProperties->transformVP[i]); //TODO:  CascadesCount - 1
 
 		S.Transpose(shadowMapProperties->transformS[i]);

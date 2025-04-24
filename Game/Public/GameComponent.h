@@ -21,7 +21,8 @@ enum MaterialTypes
 {
 	Rubber,
 	Plastic,
-	Metal
+	Metal,
+	Glass
 };
 
 enum CollisionTypes
@@ -37,17 +38,18 @@ public:
 	GameComponent();
 	GameComponent(Microsoft::WRL::ComPtr<ID3D11Device> device, const GameComponent& other);
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, MeshTypes type);
-	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, MeshTypes type, MaterialTypes matType, std::vector<Vector4> colors, UINT detailsLVL = 3);
-	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, MaterialTypes matType, const std::string& modelPath, const wchar_t* texturePath);
+	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, MeshTypes type, const MaterialTypes& matType, std::vector<Vector4> colors, UINT detailsLVL = 3);
+	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, const MaterialTypes& matType, const std::string& modelPath, const wchar_t* texturePath);
+	void InitializeMaterial(const MaterialTypes& matType);
 	void Update(CameraManager* camManager);
 	void Draw(ID3D11DeviceContext* context, ShadowMap* shadowMap);
 	void DrawShadow(ID3D11DeviceContext* context);
 	void Reload();
 	void DestroyResources();
 	void PointNormalize(Vertex& point);
-	void SphereSubdivide(std::vector<Vertex>& points, std::vector<int>& indeces);
+	void SphereSubdivide(std::vector<Vertex>* points, std::vector<int>* indeces);
 	Vector4 findCenter(const Vector4& point1, const Vector4& point2);
-	int CheckForUnique(const std::vector<Vertex>& points, Vertex pointNew, int startInd);
+	int CheckForUnique(const std::vector<Vertex>* points, Vertex pointNew, int startInd);
 	
 	bool LoadModel(const std::string& filePath);
 	void ProcessNode(aiNode* node, const aiScene* scene);
@@ -59,6 +61,7 @@ public:
 	bool collisionEnabled = false;
 	bool isMovable = false;
 	bool isPlayerControllable = false;
+	bool isTransparent = false;
 	UINT pointsCnt;
 	DirectX::BoundingBox boxCollider;
 	DirectX::BoundingSphere sphereCollider;

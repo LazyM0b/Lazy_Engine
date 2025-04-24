@@ -11,10 +11,10 @@ void TriangleComponent::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device) 
 	vertexBufDesc.CPUAccessFlags = 0;
 	vertexBufDesc.MiscFlags = 0;
 	vertexBufDesc.StructureByteStride = 0;
-	vertexBufDesc.ByteWidth = sizeof(Vertex) * std::size(points);
+	vertexBufDesc.ByteWidth = sizeof(Vertex) * std::size((*points));
 
 	D3D11_SUBRESOURCE_DATA vertexData = {};
-	vertexData.pSysMem = &points.front();
+	vertexData.pSysMem = &(*points).front();
 	vertexData.SysMemPitch = 0;
 	vertexData.SysMemSlicePitch = 0;
 
@@ -29,10 +29,10 @@ void TriangleComponent::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device) 
 	shadowVertexBufDesc.CPUAccessFlags = 0;
 	shadowVertexBufDesc.MiscFlags = 0;
 	shadowVertexBufDesc.StructureByteStride = 0;
-	shadowVertexBufDesc.ByteWidth = sizeof(shadowVertex) * std::size(shadowPoints);
+	shadowVertexBufDesc.ByteWidth = sizeof(shadowVertex) * std::size((*shadowPoints));
 
 	D3D11_SUBRESOURCE_DATA shadowVertexData = {};
-	shadowVertexData.pSysMem = &shadowPoints.front();
+	shadowVertexData.pSysMem = &(*shadowPoints).front();
 	shadowVertexData.SysMemPitch = 0;
 	shadowVertexData.SysMemSlicePitch = 0;
 
@@ -50,10 +50,10 @@ void TriangleComponent::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device) 
 		indexBufDesc.CPUAccessFlags = 0;
 		indexBufDesc.MiscFlags = 0;
 		indexBufDesc.StructureByteStride = 0;
-		indexBufDesc.ByteWidth = sizeof(int) * std::size(indexes);
+		indexBufDesc.ByteWidth = sizeof(int) * std::size((*indexes));
 
 		D3D11_SUBRESOURCE_DATA indexData = {};
-		indexData.pSysMem = &indexes.front();
+		indexData.pSysMem = &(*indexes).front();
 		indexData.SysMemPitch = 0;
 		indexData.SysMemSlicePitch = 0;
 
@@ -77,7 +77,7 @@ void TriangleComponent::DrawTriangle(ID3D11DeviceContext* context)
 	context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	context->IASetVertexBuffers(0, 1, &vertexBuffer, &strides, &offsets);
 
-	context->DrawIndexed(indexes.size(), 0, 0);
+	context->DrawIndexed((*indexes).size(), 0, 0);
 }
 
 //SHADOWS
@@ -87,7 +87,7 @@ void TriangleComponent::DrawShadowTriangle(ID3D11DeviceContext* context)
 	context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	context->IASetVertexBuffers(0, 1, &shadowVertexBuffer, &shadowStrides, &shadowOffsets);
 
-	context->DrawIndexed(indexes.size(), 0, 0);
+	context->DrawIndexed((*indexes).size(), 0, 0);
 }
 //END
 
@@ -96,7 +96,7 @@ void TriangleComponent::DrawLine(ID3D11DeviceContext* context)
 	context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
 	context->IASetVertexBuffers(0, 1, &vertexBuffer, &strides, &offsets);
 
-	context->Draw(points.size(), 0);
+	context->Draw((*points).size(), 0);
 }
 
 void TriangleComponent::ComputeNormal(const Vector3& p1, const Vector3& p2, const Vector3& p3, Vector3& outN)

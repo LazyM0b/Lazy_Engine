@@ -12,6 +12,8 @@ public:
 	void Initialize(UINT objCnt, UINT lightsCnt);
 	void Update(float deltaTime) override;
 	void ResetGame();
+	void Draw() override;
+	void DrawTransparent() override;
 
 	UINT objectsInside = 1;
 	UINT planetsCnt = 10;

@@ -132,8 +132,8 @@ int ShadowMap::ShadersInitialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 	CD3D11_RASTERIZER_DESC rastDesc = {};
 	rastDesc.CullMode = D3D11_CULL_FRONT;
 	rastDesc.FillMode = D3D11_FILL_SOLID;
-	rastDesc.DepthBias = 10000;
-	rastDesc.DepthBiasClamp = 1.0f;
+	rastDesc.DepthBias = 10000.0f;
+	rastDesc.DepthBiasClamp = 0.0f;
 	rastDesc.SlopeScaledDepthBias = 1.0f;
 
 	res = device->CreateRasterizerState(&rastDesc, &rastState);
