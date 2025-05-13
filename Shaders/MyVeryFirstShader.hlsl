@@ -11,7 +11,6 @@ struct Material
 	float4 ambient;
 	float4 diffuse;
 	float4 specular;
-	float4 reflection;
 };
 
 struct PS_IN
@@ -209,7 +208,8 @@ float4 PSMain( PS_IN input ) : SV_Target
 		{
 			depthVal = sqrt(pow(input.posW.x - playerPos.x, 2) + pow(input.posW.z - playerPos.z, 2));
 
-			switch (i % 4) {
+			switch (i % 4) 
+			{
 				case 0:
 				distance = distances[i / 4].x;
 				break;
@@ -239,7 +239,7 @@ float4 PSMain( PS_IN input ) : SV_Target
 		ComputeDirectionalLight(input.mat, dirLight, input.norm, eyeVec, amb, dif, spec);
 
 		//Only for cascade shadows debugging
-		#define COLORING
+		//#define COLORING
 		
 		#ifdef COLORING
 		float4 cascadeColor;
@@ -282,7 +282,7 @@ float4 PSMain( PS_IN input ) : SV_Target
 		
 
         float4 matColor; 
-		matColor = col * ambient + diffuse + specular;
+		matColor =  col * ambient + diffuse + specular;
 		
         col.xyz = matColor.xyz;
 		col.w = input.mat.ambient.w;

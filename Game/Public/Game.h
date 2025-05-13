@@ -61,11 +61,14 @@ public:
 	InputDevice* input;
 
 	DXGI_SWAP_CHAIN_DESC swapDescriptor;
+	DXGI_SWAP_CHAIN_DESC opaqueSwapDescriptor;
 	ID3D11DeviceContext* context;
 	IDXGISwapChain* swapChain;
 	ID3D11Texture2D* backBuffer;
+	ID3D11Texture2D* opaqueBuffer[5];
 	ID3D11Texture2D* depthStencilBuffer;
 	ID3D11RenderTargetView* renderView;
+	ID3D11RenderTargetView* opaqueRenderView[5];
 	ID3D11DepthStencilView* depthStencilView; 
 	ID3D11BlendState* blendState;
 

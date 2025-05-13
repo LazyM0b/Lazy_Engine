@@ -134,7 +134,7 @@ void GameComponent::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Mesh
 	shadowPoints = new std::vector<shadowVertex>;
 	for (UINT i = 0; i < pointsCnt; ++i)
 	{
-		shadowVertex tmp = { (*points)[i].location, Vector3((*points)[i].normal), (*points)[i].texCoord };
+		shadowVertex tmp = { (*points)[i].location };
 		(*shadowPoints).push_back(tmp);
 	}
 
@@ -267,7 +267,7 @@ void GameComponent::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, Mesh
 	shadowPoints = new std::vector<shadowVertex>;
 	for (UINT i = 0; i < pointsCnt; ++i)
 	{
-		shadowVertex tmp = { (*points)[i].location, Vector3((*points)[i].normal), (*points)[i].texCoord };
+		shadowVertex tmp = { (*points)[i].location };
 		(*shadowPoints).push_back(tmp);
 	}
 
@@ -308,7 +308,7 @@ void GameComponent::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, cons
 	shadowPoints = new std::vector<shadowVertex>;
 	for (UINT i = 0; i < pointsCnt; ++i)
 	{
-		shadowVertex tmp = { (*points)[i].location, Vector3((*points)[i].normal), (*points)[i].texCoord };
+		shadowVertex tmp = { (*points)[i].location };
 		(*shadowPoints).push_back(tmp);
 	}
 	properties = new objectProps();

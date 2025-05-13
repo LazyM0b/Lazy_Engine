@@ -26,11 +26,18 @@ struct objectProps {
 	Material material;
 };
 
+struct GBuffer
+{
+	GBuffer();
+
+	Material material;
+	Vector3 normal;
+	Vector4 posW;
+};
+
 //SHADOWS
 struct shadowVertex {
 	Vector4 location;
-	Vector3 normal;
-	Vector2 texCoord;
 };
 
 enum MeshTypes

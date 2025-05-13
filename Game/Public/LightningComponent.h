@@ -8,7 +8,6 @@ struct Material {
 	Vector4 ambient;
 	Vector4 diffuse;
 	Vector4 specular;
-	Vector4 reflection;
 };
 
 struct DirectionalLight {

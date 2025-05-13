@@ -7,7 +7,7 @@ int ShadersComponent::Initialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 
 	ID3DBlob* errorVertexCode = nullptr;
 
-	auto res = D3DCompileFromFile(L"./Shaders/MyVeryFirstShader.hlsl",
+	auto res = D3DCompileFromFile(L"./Shaders/OpaqueShader.hlsl",
 		nullptr /*macros*/,
 		nullptr /*include*/,
 		"VSMain",
@@ -37,7 +37,7 @@ int ShadersComponent::Initialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 
 	ID3DBlob* errorPixelCode = nullptr;
 
-	res = D3DCompileFromFile(L"./Shaders/MyVeryFirstShader.hlsl",
+	res = D3DCompileFromFile(L"./Shaders/OpaqueShader.hlsl",
 		Shader_Macros /*macros*/,
 		nullptr /*include*/,
 		"PSMain",

@@ -20,12 +20,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Public\CameraManager.h" />
+    <ClInclude Include="Game\Public\DefferedRenderingComponent.h" />
     <ClInclude Include="Game\Public\Delegates.h" />
     <ClInclude Include="Game\Public\DisplayWin32.h" />
     <ClInclude Include="Game\Public\Game.h" />
     <ClInclude Include="Game\Public\GameComponent.h" />
     <ClInclude Include="Game\Public\GameTimer.h" />
-    <ClInclude Include="Game\Public\GBuffer.h" />
     <ClInclude Include="Game\Public\InputDevice.h" />
     <ClInclude Include="Game\Public\Katamari.h" />
     <ClInclude Include="Game\Public\Keys.h" />
@@ -40,12 +40,12 @@
   <ItemGroup>
     <ClCompile Include="CG_HW.cpp" />
     <ClCompile Include="Game\Private\CameraManager.cpp" />
+    <ClCompile Include="Game\Private\DefferedRenderingComponent.cpp" />
     <ClCompile Include="Game\Private\Delegates.cpp" />
     <ClCompile Include="Game\Private\DisplayWin32.cpp" />
     <ClCompile Include="Game\Private\Game.cpp" />
     <ClCompile Include="Game\Private\GameComponent.cpp" />
     <ClCompile Include="Game\Private\GameTimer.cpp" />
-    <ClCompile Include="Game\Private\GBuffer.cpp" />
     <ClCompile Include="Game\Private\InputDevice.cpp" />
     <ClCompile Include="Game\Private\Katamari.cpp" />
     <ClCompile Include="Game\Private\LightningComponent.cpp" />
@@ -69,6 +69,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\ShadowMapShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\OpaqueShader.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
