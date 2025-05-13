@@ -25,6 +25,7 @@
     <ClInclude Include="Game\Public\Game.h" />
     <ClInclude Include="Game\Public\GameComponent.h" />
     <ClInclude Include="Game\Public\GameTimer.h" />
+    <ClInclude Include="Game\Public\GBuffer.h" />
     <ClInclude Include="Game\Public\InputDevice.h" />
     <ClInclude Include="Game\Public\Katamari.h" />
     <ClInclude Include="Game\Public\Keys.h" />
@@ -44,6 +45,7 @@
     <ClCompile Include="Game\Private\Game.cpp" />
     <ClCompile Include="Game\Private\GameComponent.cpp" />
     <ClCompile Include="Game\Private\GameTimer.cpp" />
+    <ClCompile Include="Game\Private\GBuffer.cpp" />
     <ClCompile Include="Game\Private\InputDevice.cpp" />
     <ClCompile Include="Game\Private\Katamari.cpp" />
     <ClCompile Include="Game\Private\LightningComponent.cpp" />

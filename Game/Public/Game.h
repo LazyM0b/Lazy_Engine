@@ -26,7 +26,7 @@ public:
 
 	Game();
 	Game(HINSTANCE hinst, LPCWSTR appName);
-	virtual void Initialize();
+	virtual void Initialize(UINT objCnt, UINT lightsCnt = 0, UINT mapSize = 0);
 	void PrepareResources();
 	int MessageHandler(UINT msg);
 	void Run();

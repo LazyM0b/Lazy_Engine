@@ -4,7 +4,7 @@ PongGame::PongGame(HINSTANCE hinst, LPCTSTR hwindow): Game(hinst, hwindow) {}
 
 void PongGame::Initialize(UINT objCnt)
 {
-	Game::Initialize();
+	Game::Initialize(objCnt);
 	for (UINT i = 0; i < objCnt - 1; ++i) {
 		objectTypes.push_back(Square);
 		objects.push_back(new GameComponent());

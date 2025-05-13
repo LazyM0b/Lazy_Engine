@@ -56,7 +56,7 @@ cbuffer Properties : register(b0)
 cbuffer Lightning : register(b1)
 {
 	DirectionalLight dirLight;
-	PointLight pointLight[512];
+	PointLight pointLight[800];
 	float3 eyePos;
     int pointLightNum;
 };

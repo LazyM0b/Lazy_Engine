@@ -42,7 +42,7 @@ public:
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, const MaterialTypes& matType, const std::string& modelPath, const wchar_t* texturePath);
 	void InitializeMaterial(const MaterialTypes& matType);
 	void Update(CameraManager* camManager);
-	void Draw(ID3D11DeviceContext* context, ShadowMap* shadowMap);
+	void Draw(ID3D11DeviceContext* context);
 	void DrawShadow(ID3D11DeviceContext* context);
 	void Reload();
 	void DestroyResources();

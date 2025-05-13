@@ -29,7 +29,7 @@ struct PointLight {
 
 struct LightningData {
 	DirectionalLight dirLight;
-	PointLight pointLights[512];
+	PointLight pointLights[800];
 	Vector3 eyePos;
 	int lightsNum;
 };

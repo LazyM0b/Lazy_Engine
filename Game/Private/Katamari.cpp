@@ -4,8 +4,8 @@
 
 Katamari::Katamari(HINSTANCE hinst, LPCTSTR hwindow) : Game(hinst, hwindow) {};
 
-void Katamari::Initialize(UINT objCnt, UINT LightsCnt) {
-	Game::Initialize();
+void Katamari::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
+	Game::Initialize(objCnt, lightsCnt, mapSize);
 
 	std::vector<Vector4> colors;
 
@@ -79,7 +79,7 @@ void Katamari::Initialize(UINT objCnt, UINT LightsCnt) {
 	texturePaths.push_back((const wchar_t*)L"Game\\Fruits\\grapefruit.png");
 	modelPaths.push_back("Game\\Fruits\\pineapple.obj");
 	texturePaths.push_back((const wchar_t*)L"Game\\Fruits\\pineapple.png");*/
-	UINT firstModelIndex = objects.size() - 1;
+	UINT firstModelIndex = (UINT) objects.size();
 	UINT modelsCnt = 0;
 	if ((int) objCnt - (int) objects.size() > 0)
 		modelsCnt = (int)modelPaths.size() < (int)objCnt - (int)objects.size() ? (UINT) modelPaths.size() : (UINT)(objCnt - objects.size());
@@ -94,21 +94,11 @@ void Katamari::Initialize(UINT objCnt, UINT LightsCnt) {
 
 	for (UINT i = (int) objects.size(); i < objCnt; ++i) {
 		objectTypes.push_back(Mesh);
+		materialTypes.push_back(Plastic);
 		objects.push_back(new GameComponent(device, *objects[rand() % modelPaths.size() + firstModelIndex]));
 		objects[objects.size() - 1]->collisionType = Dynamic;
 	}
-
-	lightBufData = new LightningData();
-	lightBufData->lightsNum = LightsCnt;
-
-	shadowMapProperties = new shadowMapProps();
-
-	mapSize = 40000;
-
 	ResetGame();
-
-	for (int i = 0; i < 100; ++i)
-		transpObjects.push_back(std::vector<GameComponent*>(mapSize));
 }
 
 void Katamari::Update(float deltaTime)
@@ -158,46 +148,12 @@ void Katamari::Update(float deltaTime)
 
 	sceneBounds.center = objects[camManager->objectToTrack]->translation;
 
-	sceneBounds.radius = 20000.0f;
-}
-
-void Katamari::DrawTransparent()
-{
-	int distance;
-	for (GameComponent* object : objects) 
-	{
-		if (object->isTransparent) 
-		{
-			Matrix transformMat = object->properties->transformW.Transpose();
-			transformMat *= object->properties->transformH.Transpose();
-
-			for (int i = 0; i < 100; ++i) 
-			{
-				int k = (int)abs(transformMat._43);
-				if (transpObjects[i][k] == NULL) {
-					transpObjects[i][k] = object;
-					break;
-				}
-			}
-		}
-	}
-	for (int i = mapSize; i >= 0; ++i)
-	{
-		for (int j = 0; j < 100; ++j)
-		{
-			if (transpObjects[j][i] == NULL) 
-			{
-				break;
-			}
-			else
-				transpObjects[j][i]->Draw(context, shadowMaps[0]);
-		}
-	}
+	sceneBounds.radius = objects[0]->scale.x;
 }
 
 void Katamari::ResetGame()
 {
-	objects[0]->scale = Vector3(20000.0f, 0.1f, 20000.0f);
+	objects[0]->scale = Vector3(mapSize / 2.0f, 0.1f, mapSize / 2.0f);
 
 	objects[1]->scale = Vector3(100.0f, 100.0f, 100.0f);
 	objects[1]->translation = Vector3(0.0f, 100.0f, 0.0f);
@@ -218,7 +174,7 @@ void Katamari::ResetGame()
 
 
 	for (int i = 2; i < objects.size(); ++i) {
-		float offset = rand() % 300;
+		float offset = (float) (rand() % 300);
 		float scale = rand() % 1000 + 100.0f;
 		objects[i]->scale = Vector3(scale, scale, scale);
 		objects[i]->translation = Vector3((float)random1(rng) - randomRange / 2, objects[i]->dimensions.y * scale, (float)random1(rng) - randomRange / 2);
@@ -261,11 +217,4 @@ void Katamari::ResetGame()
 	}
 
 	//NEW
-}
-
-void Katamari::Draw()
-{
-	Game::Draw();
-
-	DrawTransparent();
 }

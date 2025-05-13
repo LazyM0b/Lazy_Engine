@@ -11,7 +11,7 @@ Game::Game(HINSTANCE hInst, LPCWSTR appName) : hInstance(hInst), applicationName
 	instance = this;
 }
 
-void Game::Initialize() {
+void Game::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
 
 	input = new InputDevice(this);
 	hWindow = display->Init(hInstance, applicationName);
@@ -60,16 +60,30 @@ void Game::Initialize() {
 
 	camManager = new CameraManager();
 
+	//Lights init
+	lightBufData = new LightningData();
+	lightBufData->lightsNum = lightsCnt;
+	//
+
+	//shadow maps init
+	//+1 is for directional light
+	shadowMapProperties = new shadowMapProps();
+
 	int ShadowMapSize = 8192;
 
-	//SHADOWS
-	//+1 is for directional light
 	for (int i = 0; i < /*lightBufData->lightsNum +*/ 1; ++i)
 	{
 		shadowMaps.push_back(new ShadowMap(device, ShadowMapSize, ShadowMapSize));
 		shadowMaps[i]->ShadersInitialize(hWindow, device, context);
 	}
 	//END
+
+	//Transparent objects array init
+	this->mapSize = mapSize;
+
+	for (int i = 0; i < 100; ++i)
+		transpObjects.push_back(std::vector<GameComponent*>(mapSize * 2));
+	//
 }
 
 void Game::PrepareResources() {
@@ -216,6 +230,11 @@ void Game::PrepareFrame() {
 
 		context->Unmap(lightBuf, 0);
 	}
+
+	if (shadowMaps[0] != nullptr)
+	{
+		context->PSSetShaderResources(1, 1, shadowMaps[0]->GetDepthMapSRV().GetAddressOf());
+	}
 }
 
 void Game::Update(float deltaTime) {
@@ -260,16 +279,48 @@ void Game::Draw() {
 
 	context->Unmap(cascadeShadowPropsBuffer, 0);
 
-	for (auto object : objects) {
-		//if (!object->isTransparent)
-			object->Draw(context, shadowMaps[0]);
+	for (GameComponent* object : objects) {
+		if (!object->isTransparent)
+			object->Draw(context);
 	}
+	DrawTransparent();
 }
 
 
 void Game::DrawTransparent()
 {
+	for (GameComponent* object : objects)
+	{
+		if (object->isTransparent)
+		{
+			Matrix transformMat = object->properties->transformW.Transpose();
+			transformMat *= object->properties->transformH.Transpose();
 
+			for (int i = 0; i < 100; ++i)
+			{
+				int k = (int)abs(transformMat._43);
+				if (transpObjects[i][k] == NULL) {
+					transpObjects[i][k] = object;
+					break;
+				}
+			}
+		}
+	}
+	for (int i = mapSize - 1; i >= 0; --i)
+	{
+		for (int j = 0; j < 100; ++j)
+		{
+			if (transpObjects[j][i] == NULL)
+			{
+				break;
+			}
+			else
+			{
+				transpObjects[j][i]->Draw(context);
+				transpObjects[j][i] = NULL;
+			}
+		}
+	}
 }
 
 //SHADOWS
@@ -314,167 +365,6 @@ const HWND& Game::MainWindow() {
 	return hWindow;
 }
 
-/*
-void Game::BuildShadowTransform()
-{
-	Vector3 center = Vector3::Zero;
-	std::vector<Vector4> corners = GetFrustrumCornersWorldSpace(camManager->viewMatrix, camManager->projectionMatrix);
-
-	for (const auto& v : corners)
-	{
-		center += Vector3(v);
-	}
-	center /= 8;
-
-	Vector3 lightDir = Vector3(lightBufData->dirLight.direction);
-	float radius = sceneBounds.radius;
-
-	Matrix lightView = Matrix::CreateLookAt(center, center + lightDir * radius * 10, Vector3::Up);
-
-	for (int i = CascadesCount - 1; i >= 0; --i)
-	{
-		Matrix T(
-			0.5f, 0.0f, 0.0f, 0.0f,
-			0.0f, -0.5f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.5f, 0.5f, 0.0f, 1.0f);
-
-		float minX = 1000000000;// std::numeric_limits<float>::max();
-		float maxX = -1000000000;//std::numeric_limits<float>::lowest();
-		float minY = 1000000000;// std::numeric_limits<float>::max();
-		float maxY = -1000000000;//std::numeric_limits<float>::lowest();
-		float minZ = 1000000000;// std::numeric_limits<float>::max();
-		float maxZ = -1000000000;//std::numeric_limits<float>::lowest();
-
-		for (const auto& corner : corners)
-		{
-			const Vector4 rtf = Vector4::Transform(corner, lightView);
-			minX = minX < rtf.x ? minX : rtf.x;
-			maxX = maxX > rtf.x ? maxX : rtf.x;
-			minY = minY < rtf.y ? minY : rtf.y;
-			maxY = maxY > rtf.y ? maxY : rtf.y;
-			minZ = minZ < rtf.z ? minZ : rtf.z;
-			maxZ = maxZ > rtf.z ? maxZ : rtf.z;
-		}
-
-		constexpr float zMult = 10.0f;
-		minZ = minZ < 0 ? minZ * zMult : minZ / zMult;
-		maxZ = maxZ < 0 ? maxZ / zMult : maxZ * zMult;
-
-		Matrix lightProjection = DirectX::XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, minZ, maxZ);
-
-		for (auto object : objects)
-		{
-			(lightView * lightProjection).Transpose(object->shadowMapProperties->transformVP[i]);
-
-
-			(lightView * lightProjection * T).Transpose(object->shadowMapProperties->transformS[i]);
-		}
-	}
-
-
-	////lightDir.Normalize(lightDir);
-	//Vector3 lightPos = sceneBounds.radius * lightDir;
-	//Vector3 targetPos = sceneBounds.center;
-
-	//Matrix V = Matrix::CreateLookAt(lightPos, targetPos, Vector3::Up);
-
-	//Vector3 sceneCenterLS = Vector3::Transform(targetPos, V);
-
-	//float l = sceneCenterLS.x - sceneBounds.radius * 2.0f;
-	//float b = sceneCenterLS.y - sceneBounds.radius * 2.0f;
-	//float n = sceneCenterLS.z - sceneBounds.radius * 2.0f;
-	//float r = sceneCenterLS.x + sceneBounds.radius * 2.0f;
-	//float t = sceneCenterLS.y + sceneBounds.radius * 2.0f;
-	//float f = sceneCenterLS.z + sceneBounds.radius * 2.0f;
-
-	//Matrix P = DirectX::XMMatrixOrthographicOffCenterLH(l, r, b, t, n, f);
-
-	//Matrix T(
-	//	0.5f, 0.0f, 0.0f, 0.0f,
-	//	0.0f, -0.5f, 0.0f, 0.0f,
-	//	0.0f, 0.0f, 1.0f, 0.0f,
-	//	0.5f, 0.5f, 0.0f, 1.0f);
-
-	//for (auto object : objects)
-	//{
-
-	//	Matrix S = V * P * T;
-
-	//	(V * P).Transpose(object->shadowMapProperties->transformVP[0]); //TODO:  CascadesCount - 1
-
-	//	S.Transpose(object->properties->transformS);
-
-	//	for (int i = CascadesCount - 2; i >= 0; --i)
-	//	{
-	//		std::vector<Vector4> corners = GetFrustrumCornersWorldSpace(camManager->viewMatrix, camManager->projectionMatrix);
-
-	//		Vector3 center = Vector3::Zero;
-	//		for (auto corner : corners)
-	//		{
-	//			center += Vector3(corner);
-	//		}
-	//		center /= corners.size();
-
-	//		const Matrix lightView = Matrix::CreateLookAt(center, center + lightDir, Vector3::Up);
-
-	//		Matrix VCascade = lightView;
-
-	//		Matrix PCascade = lightProjection;
-
-	//		(VCascade * PCascade).Transpose(object->shadowMapProperties->transformVP[i]);
-	//	}
-	//}
-}
-*/
-
-/*
-void Game::BuildShadowTransform()
-{
-
-	Matrix T(
-		0.5f, 0.0f, 0.0f, 0.0f,
-		0.0f, -0.5f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.5f, 0.5f, 0.0f, 1.0f);
-
-	float radius = sceneBounds.radius;
-	Vector3 center = sceneBounds.center;
-
-	Vector3 lightDir = Vector3(lightBufData->dirLight.direction);
-	//lightDir.Normalize(lightDir);
-	Vector3 lightPos = radius * lightDir + center;
-	Vector3 targetPos = center;
-
-	Matrix V = Matrix::CreateLookAt(lightPos, targetPos, Vector3::Up);
-
-	Vector3 sceneCenterLS = Vector3::Transform(targetPos, V);
-
-	float l = sceneCenterLS.x - radius * 2.0f;
-	float b = sceneCenterLS.y - radius * 2.0f;
-	float n = sceneCenterLS.z - radius * 2.0f;
-	float r = sceneCenterLS.x + radius * 2.0f;
-	float t = sceneCenterLS.y + radius * 2.0f;
-	float f = sceneCenterLS.z + radius * 2.0f;
-
-	Matrix P = DirectX::XMMatrixOrthographicOffCenterLH(l, r, b, t, n, f);
-
-	Matrix S = V * P * T;
-
-	radius /= 2.0f;
-
-	for (auto object : objects)
-	{
-		(V * P).Transpose(object->shadowMapProperties->transformVP[0]); //TODO:  CascadesCount - 1
-
-		S.Transpose(object->properties->transformS[0]);
-
-		object->shadowMapProperties->distances[0] = radius;
-	}
-}
-*/
-
-
 void Game::BuildShadowTransform()
 {
 
@@ -518,67 +408,5 @@ void Game::BuildShadowTransform()
 
 		float* distance = &shadowMapProperties->distances->x;
 		*(distance + i) = f * 2.0f * cos(lightDir.y);
-
-		//std::vector<Vector4> corners = GetFrustrumCornersWorldSpace(camManager->viewMatrix, camManager->projectionMatrix);
-
-		//Vector3 center = Vector3::Zero;
-		//for (auto corner : corners)
-		//{
-		//	center += Vector3(corner);
-		//}
-		//center /= corners.size();
-
-		//const Matrix lightView = Matrix::CreateLookAt(center, center + lightDir, Vector3::Up);
-
-		//float minX = 1000000000;// std::numeric_limits<float>::max();
-		//float maxX = -1000000000;//std::numeric_limits<float>::lowest();
-		//float minY = 1000000000;// std::numeric_limits<float>::max();
-		//float maxY = -1000000000;//std::numeric_limits<float>::lowest();
-		//float minZ = 1000000000;// std::numeric_limits<float>::max();
-		//float maxZ = -1000000000;//std::numeric_limits<float>::lowest();
-
-		//for (const auto& corner : corners)
-		//{
-		//	const Vector4 rtf = Vector4::Transform(corner, lightView);
-		//	minX = minX < rtf.x ? minX : rtf.x;
-		//	maxX = maxX > rtf.x ? maxX : rtf.x;
-		//	minY = minY < rtf.y ? minY : rtf.y;
-		//	maxY = maxY > rtf.y ? maxY : rtf.y;
-		//	minZ = minZ < rtf.z ? minZ : rtf.z;
-		//	maxZ = maxZ > rtf.z ? maxZ : rtf.z;
-		//}
-
-		//constexpr float zMult = 10.0f;
-		//minZ = minZ < 0 ? minZ * zMult : minZ / zMult;
-		//maxZ = maxZ < 0 ? maxZ / zMult : maxZ * zMult;
-
-		//Matrix lightProjection = DirectX::XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, minZ, maxZ);
-
-		//Matrix VCascade = lightView;
-
-		//Matrix PCascade = lightProjection;
-
-		//(VCascade * PCascade).Transpose(object->shadowMapProperties->transformVP[i]);
 	}
-}
-
-
-//NEW
-std::vector<Vector4> Game::GetFrustrumCornersWorldSpace(const Matrix& V, const Matrix& P)
-{
-	Matrix VP = V * P;
-	VP.Invert(VP);
-
-	std::vector<Vector4> fCorners;
-	fCorners.reserve(8);
-	for (int x = 0; x < 2; ++x) {
-		for (int y = 0; y < 2; ++y) {
-			for (int z = 0; z < 2; ++z) {
-				const Vector4 pt = Vector4::Transform(Vector4(2.0f * x - 1.0f, 2.0f * y - 1.0f, (float) z, 1.0f), VP);
-				fCorners.push_back(pt / pt.w);
-			}
-		}
-	}
-
-	return fCorners;
 }

@@ -432,7 +432,7 @@ void GameComponent::Update(CameraManager* camManager)
 }
 
 //apply all transformations to object, then draw it
-void GameComponent::Draw(ID3D11DeviceContext* context, ShadowMap* shadowMap) 
+void GameComponent::Draw(ID3D11DeviceContext* context) 
 {
 	D3D11_MAPPED_SUBRESOURCE res = {};
 
@@ -449,11 +449,6 @@ void GameComponent::Draw(ID3D11DeviceContext* context, ShadowMap* shadowMap)
 	else {
 		if (m_texture != nullptr)
 			context->PSSetShaderResources(0, 1, m_texture.GetAddressOf());
-
-		if (shadowMap != nullptr)
-		{
-			context->PSSetShaderResources(1, 1, shadowMap->GetDepthMapSRV().GetAddressOf());
-		}
 		TriangleComponent::DrawTriangle(context);
 	}
 }

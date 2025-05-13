@@ -3,7 +3,7 @@
 SolarSystem::SolarSystem(HINSTANCE hinst, LPCTSTR hwindow) : Game(hinst, hwindow) {};
 
 void SolarSystem::Initialize(UINT objCnt) {
-	Game::Initialize();
+	Game::Initialize(objCnt);
 
 	for (UINT i = 0; i < objCnt; ++i) {
 
