@@ -7,6 +7,7 @@
 #include "ShadowsComponent.h"
 #include "SimpleMath.h"
 #include "LightningComponent.h"
+#include "DeferredRenderingComponent.h"
 
 using namespace DirectX::SimpleMath;
 
@@ -18,21 +19,10 @@ struct Vertex {
 };
 
 struct objectProps {
-	objectProps() {};
-
 	Matrix transformW;
 	Matrix transformWInvT;
 	Matrix transformH;
 	Material material;
-};
-
-struct GBuffer
-{
-	GBuffer();
-
-	Material material;
-	Vector3 normal;
-	Vector4 posW;
 };
 
 //SHADOWS

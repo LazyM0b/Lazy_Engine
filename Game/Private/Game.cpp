@@ -15,7 +15,6 @@ void Game::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
 
 	input = new InputDevice(this);
 	hWindow = display->Init(hInstance, applicationName);
-
 	
 	D3D_FEATURE_LEVEL featureLevel[] = { D3D_FEATURE_LEVEL_11_1 };
 
@@ -62,7 +61,7 @@ void Game::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
 
 	//Lights init
 	lightBufData = new LightningData();
-	lightBufData->lightsNum = lightsCnt;
+	lightBufData->Data.x = (float) lightsCnt;
 	//
 
 	//shadow maps init
@@ -81,34 +80,16 @@ void Game::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
 	//Transparent objects array init
 	this->mapSize = mapSize;
 
-	for (int i = 0; i < 100; ++i)
-		transpObjects.push_back(std::vector<GameComponent*>(mapSize * 2));
+	renderingSystem = new DeferredSystem();
+	renderingSystem->Initialize(device, clientWidth, clientHeight, mapSize);
 	//
 }
 
 void Game::PrepareResources() {
 	HRESULT res = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
-	//res = device->CreateRenderTargetView(backBuffer, nullptr, &renderView); // second parameter may be not nullptr if it's not for backbuffer
-
-	D3D11_TEXTURE2D_DESC textureDesc{};
-	textureDesc.Width = clientWidth;
-	textureDesc.Height = clientHeight;
-	textureDesc.MipLevels = 1;
-	textureDesc.ArraySize = 1;
-	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	textureDesc.SampleDesc.Count = 1;
-	textureDesc.Usage = D3D11_USAGE_DEFAULT;
-	textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
-
-	res = device->CreateRenderTargetView(backBuffer, nullptr, &opaqueRenderView[0]); // second parameter may be not nullptr if it's not for backbuffer
-	for (int i = 0; i < 4; ++i)
-	{
-		res = device->CreateTexture2D(&textureDesc, nullptr, &opaqueBuffer[i]);
-		res = device->CreateRenderTargetView(opaqueBuffer[i], nullptr, &opaqueRenderView[i+1]); // second parameter may be not nullptr if it's not for backbuffer
-	}
+	res = device->CreateRenderTargetView(backBuffer, nullptr, &renderView); // second parameter may be not nullptr if it's not for backbuffer
 
 	//create depth/stencil buffer and view
-
 	D3D11_TEXTURE2D_DESC depthStencilDesc;
 
 	depthStencilDesc.Width = clientWidth;
@@ -168,6 +149,7 @@ void Game::Run() {
 	PrevTime = std::chrono::steady_clock::now();
 	totalTime = 0;
 	frameCount = 0;
+	lightBufData->Data.y = 1;
 
 	MSG msg = {};
 	bool isExitRequested = false;
@@ -205,27 +187,43 @@ void Game::Run() {
 
 		context->ClearState();
 
-		PrepareFrame();
-
-		RestoreTargets(5, &opaqueRenderView[0], depthStencilView);
-
-		Draw();
-
-		swapChain->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
-
-		RestoreTargets();
-
-		//context->ClearState();
-
 		//PrepareFrame();
 
-		//RestoreTargets(1, &opaqueRenderView[0], depthStencilView);
+		//RestoreTargets(1, &renderView, depthStencilView);
 
 		//Draw();
 
 		//swapChain->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
 
 		//RestoreTargets();
+
+		PrepareOpaque();
+
+		//renderingSystem.PrepareFrame();
+
+		RestoreTargets(GBufferSize, renderingSystem->GetRenderTargets(), depthStencilView);
+
+		shaders->DrawOpaque(context);
+
+		renderingSystem->DrawOpaque(context, objects);
+
+		context->ClearState();
+
+		PrepareLighting();
+
+		RestoreTargets(1, &renderView, depthStencilView);
+
+		shaders->DrawLighting(context);
+
+		renderingSystem->DrawLighting(context);
+
+		/* TODO
+		renderingSystem->DrawTransparent(context, objects, mapSize);
+		*/
+
+		swapChain->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
+
+		RestoreTargets();
 	}
 }
 
@@ -237,20 +235,27 @@ int Game::MessageHandler(UINT msg) {
 	return 0;
 }
 
-void Game::PrepareFrame() {
+void Game::PrepareOpaque() {
+	PrepareViewport();
 
-	D3D11_VIEWPORT* viewport = new D3D11_VIEWPORT();
-	viewport->Width = (float) clientWidth;
-	viewport->Height = (float) clientHeight;
-	viewport->TopLeftX = 0;
-	viewport->TopLeftY = 0;
-	viewport->MinDepth = 0;
-	viewport->MaxDepth = 1.0f; 
-	context->RSSetViewports(1, viewport);
+	ID3D11RenderTargetView* const* renderViews = renderingSystem->GetRenderTargets();
+
+	float color[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	for (int i = 0; i < GBufferSize; ++i)
+		context->ClearRenderTargetView(renderViews[i], color);
+}
+
+
+void Game::PrepareLighting()
+{
+	PrepareViewport();
+
+	float color[] = { 0.1f, 0.1f, 0.2f, 1.0f };
+	context->ClearRenderTargetView(renderView, color);
 
 	if (lightBufData != nullptr) {
 		D3D11_MAPPED_SUBRESOURCE res = {};
-		context->PSSetConstantBuffers(1, 1, &lightBuf);
+		context->PSSetConstantBuffers(0, 1, &lightBuf);
 		context->Map(lightBuf, 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
 
 
@@ -260,17 +265,65 @@ void Game::PrepareFrame() {
 		context->Unmap(lightBuf, 0);
 	}
 
+	D3D11_MAPPED_SUBRESOURCE res = {};
+	context->PSSetConstantBuffers(1, 1, &cascadeShadowPropsBuffer);
+	context->Map(cascadeShadowPropsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
+
+	auto dataPtr = reinterpret_cast<float*>(res.pData);
+	memcpy(dataPtr, shadowMapProperties, sizeof(shadowMapProps));
+
+	context->Unmap(cascadeShadowPropsBuffer, 0);
+
+	//also for transparent
+	float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	context->OMSetBlendState(blendState, blendFactors, 0xffffffff);
+
+	for (int i = 0; i < GBufferSize; ++i)
+	{
+		context->PSSetShaderResources(i, 1, renderingSystem->GetSRV(i));
+	}
+
 	if (shadowMaps[0] != nullptr)
 	{
-		context->PSSetShaderResources(1, 1, shadowMaps[0]->GetDepthMapSRV().GetAddressOf());
+		context->PSSetShaderResources(GBufferSize, 1, shadowMaps[0]->GetDepthMapSRV().GetAddressOf());
 	}
+}
+
+
+void Game::PrepareTransparent()
+{
+	float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	context->OMSetBlendState(blendState, blendFactors, 0xffffffff);
+
+	D3D11_MAPPED_SUBRESOURCE res = {};
+	context->PSSetConstantBuffers(2, 1, &cascadeShadowPropsBuffer);
+	context->Map(cascadeShadowPropsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
+
+	auto dataPtr = reinterpret_cast<float*>(res.pData);
+	memcpy(dataPtr, shadowMapProperties, sizeof(shadowMapProps));
+
+	context->Unmap(cascadeShadowPropsBuffer, 0);
 }
 
 void Game::Update(float deltaTime) {
 
+	lightBufData->transformHInv = objects[0]->properties->transformH.Transpose();
+	lightBufData->transformHInv.Invert(lightBufData->transformHInv);
+	lightBufData->transformHInv.Transpose(lightBufData->transformHInv);
 
 	totalTime += deltaTime;
 	frameCount++;
+
+	if (input->IsKeyDown(Keys::D1))
+		lightBufData->Data.y = 1;
+	else if (input->IsKeyDown(Keys::D2))
+		lightBufData->Data.y = 2;
+	else if (input->IsKeyDown(Keys::D3))
+		lightBufData->Data.y = 3;
+	else if (input->IsKeyDown(Keys::D4))
+		lightBufData->Data.y = 4;
+	else if (input->IsKeyDown(Keys::D5))
+		lightBufData->Data.y = 5;
 
 	if (totalTime > 1.0f) {
 		float fps = frameCount / totalTime;
@@ -289,10 +342,8 @@ void Game::Update(float deltaTime) {
 void Game::Draw() {
 
 	float color[] = { 0.1f, 0.1f, 0.2f, 1.0f };
-	context->ClearRenderTargetView(opaqueRenderView[0], color);
-	for (int i = 1; i < 5; ++i)
-	context->ClearRenderTargetView(opaqueRenderView[i], color);
-	shaders->Draw(context);
+	context->ClearRenderTargetView(renderView, color);
+	//shaders->Draw(context);
 
 	float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	context->OMSetBlendState(blendState, blendFactors, 0xffffffff);
@@ -314,44 +365,18 @@ void Game::Draw() {
 		if (!object->isTransparent)
 			object->Draw(context);
 	}
-	DrawTransparent();
 }
 
-
-void Game::DrawTransparent()
+void Game::PrepareViewport()
 {
-	for (GameComponent* object : objects)
-	{
-		if (object->isTransparent)
-		{
-			Matrix transformMat = object->properties->transformW.Transpose();
-			transformMat *= object->properties->transformH.Transpose();
-
-			for (int i = 0; i < 100; ++i)
-			{
-				int k = (int)abs(transformMat._43);
-				if (transpObjects[i][k] == NULL) {
-					transpObjects[i][k] = object;
-					break;
-				}
-			}
-		}
-	}
-	for (int i = mapSize - 1; i >= 0; --i)
-	{
-		for (int j = 0; j < 100; ++j)
-		{
-			if (transpObjects[j][i] == NULL)
-			{
-				break;
-			}
-			else
-			{
-				transpObjects[j][i]->Draw(context);
-				transpObjects[j][i] = NULL;
-			}
-		}
-	}
+	D3D11_VIEWPORT* viewport = new D3D11_VIEWPORT();
+	viewport->Width = (float)clientWidth;
+	viewport->Height = (float)clientHeight;
+	viewport->TopLeftX = 0;
+	viewport->TopLeftY = 0;
+	viewport->MinDepth = 0;
+	viewport->MaxDepth = 1.0f;
+	context->RSSetViewports(1, viewport);
 }
 
 //SHADOWS

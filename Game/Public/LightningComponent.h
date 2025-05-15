@@ -5,7 +5,6 @@
 using namespace DirectX::SimpleMath;
 
 struct Material {
-	Vector4 ambient;
 	Vector4 diffuse;
 	Vector4 specular;
 };
@@ -18,7 +17,6 @@ struct DirectionalLight {
 };
 
 struct PointLight {
-	Vector4 ambient;
 	Vector4 diffuse;
 	Vector4 specular;
 
@@ -29,8 +27,9 @@ struct PointLight {
 struct LightningData {
 	DirectionalLight dirLight;
 	PointLight pointLights[800];
-	Vector3 eyePos;
-	int lightsNum;
+	Vector4 eyePos;
+	Matrix transformHInv;
+	Vector4 Data;
 };
 
 static Matrix InverseTranspose(Matrix inputMatrix) {

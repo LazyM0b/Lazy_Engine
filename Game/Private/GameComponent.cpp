@@ -381,25 +381,22 @@ void GameComponent::InitializeMaterial(const MaterialTypes& matType)
 	case Rubber:
 		break;
 	case Plastic:
-		properties->material.ambient = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		properties->material.diffuse = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 		properties->material.specular = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 		break;
 	case Metal:
-		properties->material.ambient = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		properties->material.diffuse = Vector4(0.2775f, 0.2775f, 0.2775f, 1.0f);
 		properties->material.specular = Vector4(0.773911f, 0.773911f, 0.773911f, 100.0f);
 		break;
 	case Glass:
-		properties->material.ambient = Vector4(1.0f, 1.0f, 1.0f, 0.2f);
-		properties->material.diffuse = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
+		properties->material.diffuse = Vector4(0.1f, 0.1f, 0.1f, 0.2f);
 		properties->material.specular = Vector4(0.773911f, 0.773911f, 0.773911f, 150.0f);
 		break;
 	default:
 		break;
 	}
 
-	if (properties->material.ambient.w < 1.0f)
+	if (properties->material.diffuse.w < 1.0f)
 		isTransparent = true;
 }
 

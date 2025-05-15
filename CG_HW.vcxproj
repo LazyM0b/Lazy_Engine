@@ -20,7 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game\Public\CameraManager.h" />
-    <ClInclude Include="Game\Public\DefferedRenderingComponent.h" />
+    <ClInclude Include="Game\Public\DeferredRenderingComponent.h" />
     <ClInclude Include="Game\Public\Delegates.h" />
     <ClInclude Include="Game\Public\DisplayWin32.h" />
     <ClInclude Include="Game\Public\Game.h" />
@@ -40,7 +40,7 @@
   <ItemGroup>
     <ClCompile Include="CG_HW.cpp" />
     <ClCompile Include="Game\Private\CameraManager.cpp" />
-    <ClCompile Include="Game\Private\DefferedRenderingComponent.cpp" />
+    <ClCompile Include="Game\Private\DeferredRenderingComponent.cpp" />
     <ClCompile Include="Game\Private\Delegates.cpp" />
     <ClCompile Include="Game\Private\DisplayWin32.cpp" />
     <ClCompile Include="Game\Private\Game.cpp" />
@@ -74,6 +74,13 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\OpaqueShader.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\LightingShader.hlsl">
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Effect</ShaderType>
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

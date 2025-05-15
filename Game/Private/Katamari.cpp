@@ -36,7 +36,7 @@ void Katamari::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
 	{
 		objectTypes.push_back(Sphere);
 		objects.push_back(new GameComponent());
-		materialTypes.push_back(Glass);
+		materialTypes.push_back(Plastic);
 		objects[objects.size() - 1]->Initialize(device, objectTypes[objects.size() - 1], materialTypes[materialTypes.size() - 1], colors, LOD);
 		objects[objects.size() - 1]->collisionType = Dynamic;
 	}
@@ -103,8 +103,6 @@ void Katamari::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
 
 void Katamari::Update(float deltaTime)
 {
-	Game::Update(deltaTime);
-
 	camManager->UpdatePos(input, objects[camManager->objectToTrack]->translation, clientWidth, clientHeight, &objects[camManager->objectToTrack]->impulse);
 	controller->UpdatePos(input, objects[camManager->objectToTrack]);
 
@@ -115,7 +113,7 @@ void Katamari::Update(float deltaTime)
 	}
 #endif
 
-	lightBufData->eyePos = camManager->cameraPos;
+	lightBufData->eyePos = Vector4(camManager->cameraPos);
 	shadowMapProperties->playerPos = Vector4(objects[1]->translation);
 
 	//printf("%f %f %f\n", camManager->cameraPos.x, camManager->cameraPos.y, camManager->cameraPos.z);
@@ -149,6 +147,7 @@ void Katamari::Update(float deltaTime)
 	sceneBounds.center = objects[camManager->objectToTrack]->translation;
 
 	sceneBounds.radius = objects[0]->scale.x;
+	Game::Update(deltaTime);
 }
 
 void Katamari::ResetGame()
@@ -193,12 +192,11 @@ void Katamari::ResetGame()
 
 	lightBufData->dirLight.ambient = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 	lightBufData->dirLight.diffuse = Vector4(0.25f, 0.25f, 0.25f, 1.0f);
-	lightBufData->dirLight.specular = Vector4(0.25f, 0.25f, 0.25f, 1.0f);
-	lightBufData->dirLight.direction = Vector4(0.5f, -0.5f, 0.5f, 1.0f);
+	lightBufData->dirLight.specular = Vector4(0.5f, 0.5f, 0.5f, 1.0f);
+	lightBufData->dirLight.direction = Vector4(-0.5f, -0.5f, -0.5f, 1.0f);
 	
-	for (int i = 0; i < lightBufData->lightsNum; ++i)
+	for (int i = 0; i < (int) lightBufData->Data.x; ++i)
 	{
-		lightBufData->pointLights[i].ambient = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
 		lightBufData->pointLights[i].diffuse = Vector4(0.007f, 0.007f, 0.007f, 1.0f);
 		lightBufData->pointLights[i].specular = Vector4(0.07f, 0.07f, 0.07f, 1.0f);
 		lightBufData->pointLights[i].attenuation = Vector4(0.0f, 0.0003f, 0.0f, 5000.0f);

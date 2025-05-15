@@ -106,11 +106,10 @@ void SolarSystem::ResetGame()
 
 	lightBufData = new LightningData();
 
-	lightBufData->pointLights[0].ambient = Vector4(0.3f, 0.3f, 0.3f, 1.0f);
 	lightBufData->pointLights[0].diffuse = Vector4(0.1f, 0.7f, 0.1f, 1.0f);
 	lightBufData->pointLights[0].specular = Vector4(0.1f, 0.7f, 0.1f, 1.0f);
 	lightBufData->pointLights[0].attenuation = Vector4(0.0f, 0.0001f, 0.0f, 500000.0f);
-	lightBufData->lightsNum = 1;
+	lightBufData->Data.x = 1;
 
 	//lightPosL = Vector4(objects[0]->translation);
 }
