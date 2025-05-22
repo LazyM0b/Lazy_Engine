@@ -164,16 +164,23 @@ void Katamari::Update(float deltaTime)
 
 	if (input->IsKeyDown(Keys::MouseButtonX1))
 	{
-		input->RemovePressedKey(Keys::MouseButtonX1);
 		for (int i = 0; i < lightBufData->Data.y; ++i)
 		{
-			Vector3 direction = ClickPos();
+			spotLightPos = Vector4(ClickPos());
 			/*direction.Normalize(direction);
 
 			lightBufData->spotLights[i].cone.x = direction.x;
 			lightBufData->spotLights[i].cone.y = direction.y;
 			lightBufData->spotLights[i].cone.z = direction.z;*/
 		}
+	}
+	else
+	{
+		Vector4 dir;
+		(spotLightPos - lightBufData->spotLights->position).Normalize(dir);
+		for (int i = 0; i < 400; ++i)
+			lightBufData->spotLights[i].cone = Vector4(dir.x, dir.y, dir.z, lightBufData->spotLights->cone.w);
+		printf("%f %f %f\n", dir.x, dir.y, dir.z);
 	}
 
 	Game::Update(deltaTime);

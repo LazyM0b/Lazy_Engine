@@ -200,6 +200,9 @@ void Game::Run() {
 
 		renderingSystem->DrawOpaque(context, objects);
 
+		if (spotLightPos != Vector4::Zero)
+			renderingSystem->PrepareFrame(context);
+
 		context->ClearState();
 
 		PrepareLighting();
@@ -294,6 +297,12 @@ void Game::PrepareLighting()
 	if (shadowTexture != nullptr)
 	{
 		context->PSSetShaderResources(GBufferSize + 1, 1, shadowTexture.GetAddressOf());
+	}
+	if (spotLightPos != Vector4::Zero)
+	{
+		spotLightPos = renderingSystem->FindClickPosW(context, clientWidth, (UINT)spotLightPos.x, (UINT)spotLightPos.y);
+		printf("%f %f %f\n", spotLightPos.x, spotLightPos.y, spotLightPos.z);
+		input->RemovePressedKey(Keys::MouseButtonX1);
 	}
 }
 
@@ -511,7 +520,7 @@ void Game::CullBackward()
 	}
 }
 
-Vector3 Game::ClickPos()
+Vector2 Game::ClickPos()
 {
 	float posXs = input->MousePosition.x;
 	float posYs = input->MousePosition.y;
@@ -521,7 +530,7 @@ Vector3 Game::ClickPos()
 
 	//printf("%f %f\n", posXn, posYn);
 	//Vector4 origin = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-	Vector3 oldPos = Vector3(posXn, posYn, 1.0f);
+	Vector2 oldPos = Vector2(posXs, posYs);
 	//Vector4 newPos = Vector4::Transform(Vector4(oldPos), camManager->viewMatrix.Invert());
 	//Vector3 direction = Vector3(newPos) - camManager->cameraPos;
 	////printf("%f %f %f\n", direction.x, direction.y, direction.z);

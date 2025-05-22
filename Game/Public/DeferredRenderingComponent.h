@@ -28,7 +28,9 @@ public:
 	void DrawOpaque(ID3D11DeviceContext* context, std::vector<GameComponent*> objects);
 	void DrawLighting(ID3D11DeviceContext* context, UINT width, UINT height);
 	void DrawTransparent(ID3D11DeviceContext* context, std::vector<GameComponent*> objects, UINT mapSize);
-	void PrepareFrame();
+	void PrepareFrame(ID3D11DeviceContext* context);
+
+	Vector4 FindClickPosW(ID3D11DeviceContext* context, UINT Width, UINT posX, UINT posY);
 
 	ID3D11Texture2D* const* GetTexture(UINT texID) { return &opaqueBuffer[texID]; };
 	ID3D11RenderTargetView* const* GetRenderTargets() { return &opaqueRenderView[0]; };
@@ -40,6 +42,8 @@ public:
 	ID3D11Texture2D* opaqueBuffer[GBufferSize];
 	ID3D11RenderTargetView* opaqueRenderView[GBufferSize];
 	ID3D11ShaderResourceView* opaqueSRV[GBufferSize];
+	ID3D11Texture2D* renderPositions;
+	D3D11_MAPPED_SUBRESOURCE renderPositionsInfo;
 	std::vector<UINT>* points;
 	std::vector<std::vector<GameComponent*>> transpObjects;
 };

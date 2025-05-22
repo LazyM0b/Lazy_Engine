@@ -40,6 +40,17 @@ void DeferredSystem::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, UIN
 		res = device->CreateRenderTargetView(opaqueBuffer[i], nullptr, &opaqueRenderView[i]); // second parameter may be not nullptr if it's not for backbuffer
 		res = device->CreateShaderResourceView(opaqueBuffer[i], &srvDesc, &opaqueSRV[i]);
 	}
+	D3D11_TEXTURE2D_DESC textureDesc1{};
+	textureDesc1.Width = clientWidth;
+	textureDesc1.Height = clientHeight;
+	textureDesc1.MipLevels = 1;
+	textureDesc1.ArraySize = 1;
+	textureDesc1.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	textureDesc1.SampleDesc.Count = 1;
+	textureDesc1.Usage = D3D11_USAGE_STAGING;
+	textureDesc1.BindFlags =0;
+	textureDesc1.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	res = device->CreateTexture2D(&textureDesc1, nullptr, &renderPositions);
 
 	D3D11_BUFFER_DESC pointsBufDesc = {};
 	pointsBufDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -123,6 +134,16 @@ void DeferredSystem::DrawTransparent(ID3D11DeviceContext* context, std::vector<G
 	}
 }
 
-void DeferredSystem::PrepareFrame()
+void DeferredSystem::PrepareFrame(ID3D11DeviceContext* context)
 {
+	context->CopyResource(renderPositions, opaqueBuffer[0]);
+	renderPositionsInfo = {};
+	HRESULT res = context->Map(renderPositions, 0, D3D11_MAP_READ, 0, &renderPositionsInfo);
+}
+
+DirectX::SimpleMath::Vector4 DeferredSystem::FindClickPosW(ID3D11DeviceContext* context, UINT Width, UINT posX, UINT posY)
+{
+		Vector4 tmp = ((Vector4*)(renderPositionsInfo.pData))[posY * Width + posX];
+		context->Unmap(renderPositions, 0);
+		return tmp;
 }

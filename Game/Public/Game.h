@@ -47,7 +47,7 @@ public:
 	void BuildShadowTransform();
 	void CullBackward();
 	//END
-	Vector3 ClickPos();
+	Vector2 ClickPos();
 
 	DisplayWin32* display;
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
@@ -92,6 +92,7 @@ public:
 	//GameTimer timer;
 
 	std::chrono::time_point<std::chrono::steady_clock> PrevTime;
+	Vector4 spotLightPos;
 	float totalTime = 0;
 	float cullingDistance = 0.0f;
 	UINT LOD = 1;
