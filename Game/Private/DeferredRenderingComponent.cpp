@@ -136,7 +136,7 @@ void DeferredSystem::DrawTransparent(ID3D11DeviceContext* context, std::vector<G
 
 void DeferredSystem::PrepareFrame(ID3D11DeviceContext* context)
 {
-	context->CopyResource(renderPositions, opaqueBuffer[0]);
+	context->CopyResource(renderPositions, opaqueBuffer[1]);
 	renderPositionsInfo = {};
 	HRESULT res = context->Map(renderPositions, 0, D3D11_MAP_READ, 0, &renderPositionsInfo);
 }

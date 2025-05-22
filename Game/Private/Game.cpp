@@ -300,9 +300,16 @@ void Game::PrepareLighting()
 	}
 	if (spotLightPos != Vector4::Zero)
 	{
+		input->RemovePressedKey(Keys::MouseButtonX1);
 		spotLightPos = renderingSystem->FindClickPosW(context, clientWidth, (UINT)spotLightPos.x, (UINT)spotLightPos.y);
 		printf("%f %f %f\n", spotLightPos.x, spotLightPos.y, spotLightPos.z);
-		input->RemovePressedKey(Keys::MouseButtonX1);
+		for (int i = 0; i < 400; ++i)
+		{
+			//(spotLightPos - lightBufData->spotLights[i].position).Normalize(dir);
+			lightBufData->spotLights[i].position = Vector4(spotLightPos.x, 1000.0f, spotLightPos.z, 1.0f);
+			//printf("%f %f %f\n", dir.x, dir.y, dir.z);
+		}
+		spotLightPos = Vector4::Zero;
 	}
 }
 

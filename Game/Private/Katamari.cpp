@@ -174,14 +174,6 @@ void Katamari::Update(float deltaTime)
 			lightBufData->spotLights[i].cone.z = direction.z;*/
 		}
 	}
-	else
-	{
-		Vector4 dir;
-		(spotLightPos - lightBufData->spotLights->position).Normalize(dir);
-		for (int i = 0; i < 400; ++i)
-			lightBufData->spotLights[i].cone = Vector4(dir.x, dir.y, dir.z, lightBufData->spotLights->cone.w);
-		printf("%f %f %f\n", dir.x, dir.y, dir.z);
-	}
 
 	Game::Update(deltaTime);
 }
