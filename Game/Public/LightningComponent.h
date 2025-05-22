@@ -24,9 +24,19 @@ struct PointLight {
 	Vector4 attenuation;
 };
 
+struct SpotLight {
+	Vector4 diffuse;
+	Vector4 specular;
+
+	Vector4 position;
+	Vector4 attenuation;
+	Vector4 cone;
+};
+
 struct LightningData {
 	DirectionalLight dirLight;
-	PointLight pointLights[800];
+	PointLight pointLights[400];
+	SpotLight spotLights[400];
 	Vector4 eyePos;
 	Matrix transformHInv;
 	Vector4 Data;

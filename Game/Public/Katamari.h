@@ -9,7 +9,7 @@ using namespace DirectX::SimpleMath;
 class Katamari : public Game {
 public:
 	Katamari(HINSTANCE hinst, LPCTSTR hwindow);
-	virtual void Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) override;
+	virtual void Initialize(UINT objCnt, UINT pointlightsCnt = 0, UINT spotlightsCnt = 0, UINT mapSize = 0) override;
 	void Update(float deltaTime) override;
 	void ResetGame();
 

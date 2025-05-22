@@ -26,7 +26,7 @@ class Game {
 public:
 
 	Game(HINSTANCE hinst, LPCWSTR appName);
-	virtual void Initialize(UINT objCnt, UINT lightsCnt = 0, UINT mapSize = 0);
+	virtual void Initialize(UINT objCnt, UINT pointLightsCnt = 0, UINT spotLightsCnt = 0, UINT mapSize = 0);
 	void PrepareResources();
 	int MessageHandler(UINT msg);
 	void Run();
@@ -45,7 +45,9 @@ public:
 	//SHADOWS
 	void DrawSceneToShadowMap();
 	void BuildShadowTransform();
+	void CullBackward();
 	//END
+	Vector3 ClickPos();
 
 	DisplayWin32* display;
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
@@ -81,6 +83,8 @@ public:
 	BoundingSphere sceneBounds;
 	shadowMapProps* shadowMapProperties;
 	ID3D11Buffer* cascadeShadowPropsBuffer;
+	Microsoft::WRL::ComPtr <ID3D11Resource> shadowResource;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shadowTexture;
 	//END
 
 	CameraManager* camManager;
@@ -89,6 +93,7 @@ public:
 
 	std::chrono::time_point<std::chrono::steady_clock> PrevTime;
 	float totalTime = 0;
+	float cullingDistance = 0.0f;
 	UINT LOD = 1;
 	UINT frameCount = 0;
 	UINT clientWidth;

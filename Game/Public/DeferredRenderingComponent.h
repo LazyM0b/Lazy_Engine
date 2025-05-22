@@ -26,7 +26,7 @@ class DeferredSystem
 public:
 	void Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, UINT clientWidth, UINT clientHeight, UINT mapSize);
 	void DrawOpaque(ID3D11DeviceContext* context, std::vector<GameComponent*> objects);
-	void DrawLighting(ID3D11DeviceContext* context);
+	void DrawLighting(ID3D11DeviceContext* context, UINT width, UINT height);
 	void DrawTransparent(ID3D11DeviceContext* context, std::vector<GameComponent*> objects, UINT mapSize);
 	void PrepareFrame();
 

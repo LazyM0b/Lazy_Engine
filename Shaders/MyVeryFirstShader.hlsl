@@ -8,7 +8,6 @@ struct VS_IN
 
 struct Material 
 {
-	float4 ambient;
 	float4 diffuse;
 	float4 specular;
 };
@@ -34,12 +33,21 @@ struct DirectionalLight
 
 struct PointLight 
 {
-	float4 ambient;
 	float4 diffuse;
 	float4 specular;
 
 	float4 position;
 	float4 attenuation;
+};
+
+struct SpotLight 
+{
+	float4 diffuse;
+	float4 specular;
+
+	float4 position;
+	float4 attenuation;
+	float4 cone;
 };
 
 static const int CascadesCount = 4;
@@ -55,9 +63,11 @@ cbuffer Properties : register(b0)
 cbuffer Lightning : register(b1)
 {
 	DirectionalLight dirLight;
-	PointLight pointLight[800];
-	float3 eyePos;
-    int pointLightNum;
+	PointLight pointLights[400];
+	SpotLight spotLights[400];
+	float4 eyePos;
+	float4x4 transformHInv;
+    float4 data;
 };
 
 cbuffer Cascades : register(b2)
@@ -70,9 +80,9 @@ cbuffer Cascades : register(b2)
 
 Texture2D objTexture : TEXTURE : register(t0);
 
-SamplerState objSampler : SAMPLER : register(s0);
-
 Texture2DArray shadowMap : TEXTUREARRAY : register(t1);
+
+SamplerState objSampler : SAMPLER : register(s0);
 
 SamplerComparisonState samplerShadow : SAMPLER : register(s1);
 
@@ -85,7 +95,7 @@ void ComputeDirectionalLight (Material mat, DirectionalLight light, float3 norm,
 
 	float3 lightVector = -light.direction.xyz;
 
-	ambient = mat.ambient * light.ambient;
+	ambient = light.ambient;
 
 	float dif = dot(lightVector, norm);
 	
@@ -99,9 +109,8 @@ void ComputeDirectionalLight (Material mat, DirectionalLight light, float3 norm,
 	}
 }
 
-void ComputePointLight (Material mat, PointLight light, float3 pos, float3 norm, float3 eye, out float4 ambient, out float4 diffuse, out float4 specular) 
+void ComputePointLight (Material mat, PointLight light, float3 pos, float3 norm, float3 eye, out float4 diffuse, out float4 specular) 
 {
-	ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
 	diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
 	specular = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -114,8 +123,6 @@ void ComputePointLight (Material mat, PointLight light, float3 pos, float3 norm,
 
 	lightVector /= d;
 	
-    ambient = mat.ambient * light.ambient;
-
 	float dif = dot(lightVector, norm);
 	
 	[FLATTEN] if (dif > 0.0f)
@@ -134,6 +141,41 @@ void ComputePointLight (Material mat, PointLight light, float3 pos, float3 norm,
 	//for gradient
 	if (d > light.attenuation.w / 2)
 		specular *= 1.0f - (d - light.attenuation.w / 2) / (light.attenuation.w / 2);
+}
+
+void ComputeSpotLight (Material mat, SpotLight light, float3 pos, float3 norm, float3 eye, out float4 diffuse, out float4 specular) 
+{
+	diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	specular = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	float3 lightVector = light.position.xyz - pos;
+	float d = length(lightVector);
+
+
+	if (d > light.attenuation.w)
+		return;
+
+	lightVector /= d;
+	
+	float dif = dot(lightVector, norm);
+	
+	[FLATTEN] if (dif > 0.0f)
+	{
+		float3 v = reflect(-lightVector, norm);
+		float spec = pow(max(dot(v, eye), 0.0f), mat.specular.w);
+
+		diffuse = dif * mat.diffuse * light.diffuse;
+		specular = spec * mat.specular * light.specular;
+	}
+	float spot = pow(max(dot(-lightVector, light.cone.xyz), 0.0f), light.cone.w);
+	float attenuation = spot / dot(light.attenuation.xyz, float3(1.0f, d, d*d));
+	
+	diffuse *= attenuation;
+	specular *= attenuation;
+
+	//for gradient
+	//if (d > light.attenuation.w / 2)
+	//	specular *= 1.0f - (d - light.attenuation.w / 2) / (light.attenuation.w / 2);
 }
 
 //SHADOWS
@@ -163,8 +205,9 @@ float CalcShadowFactor(SamplerComparisonState samplerShadow, Texture2DArray shad
     {
         percent += shadowMap.SampleCmp(samplerShadow, float3(pos.xy + offsets[i], layer), depth).r;
     };
+	percent /= 9.0f;
 
-	return percent /= 9.0f;
+	return percent;
 }
 //END
 
@@ -174,6 +217,7 @@ PS_IN VSMain( VS_IN input)
 
 	output.posW = mul(input.pos, transformW);
 	output.posH = mul(output.posW, transformH);
+    output.posH.z = output.posH.z / 80000.0f;
 	output.col = input.col;
 	output.tex = input.tex;
 	output.norm = mul(input.norm, (float3x3)transformWInvT);
@@ -183,15 +227,16 @@ PS_IN VSMain( VS_IN input)
 
 float4 PSMain( PS_IN input ) : SV_Target
 {
-	
+    //input.posH = float4(input.posH.xyz / input.posH.w, 1);
+    
 	float4 col = input.col;
 	if (input.tex.x != 0.0f && input.tex.y != 0.0f) 
 		col = objTexture.Sample(objSampler, input.tex);
 
-	if ((dirLight.ambient.w != 0.0f || pointLight[0].ambient.w != 0.0f) && (col.x + col.y + col.z != 3.0f)) {
+	if ((dirLight.ambient.w != 0.0f || pointLights[0].diffuse.w != 0.0f || spotLights[0].diffuse.w != 0.0f) && (col.x + col.y + col.z != 3.0f)) {
 		input.norm = normalize(input.norm);
 
-		float3 eyeVec = normalize(eyePos - input.posW.xyz);
+		float3 eyeVec = normalize(eyePos.xyz - input.posW.xyz);
         
 		float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
 		float4 diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -271,21 +316,27 @@ float4 PSMain( PS_IN input ) : SV_Target
 		diffuse += dif * shadow;
 		specular += spec * shadow;
 		
-        for (int i = 0; i < pointLightNum; ++i)
+        for (int i = 0; i < data.x; ++i)
         {
-            ComputePointLight(input.mat, pointLight[i], input.posW.xyz, input.norm, eyeVec, amb, dif, spec);
+            ComputePointLight(input.mat, pointLights[i], input.posW.xyz, input.norm.xyz, eyeVec.xyz, dif, spec);
 
-            ambient += amb;
             diffuse += dif;
             specular += spec;
         }
 		
+        for (int i = 0; i < (int)data.y; ++i)
+        {
+            ComputeSpotLight(input.mat, spotLights[i], input.posW.xyz, input.norm.xyz, eyeVec.xyz, dif, spec);
+
+            diffuse += dif;
+            specular += spec;
+        }
 
         float4 matColor; 
 		matColor =  col * ambient + diffuse + specular;
 		
         col.xyz = matColor.xyz;
-		col.w = input.mat.ambient.w;
+		col.w = input.mat.diffuse.w;
     }
 
 	return col;

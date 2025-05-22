@@ -67,33 +67,38 @@ void DeferredSystem::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device, UIN
 void DeferredSystem::DrawOpaque(ID3D11DeviceContext* context, std::vector<GameComponent*> objects)
 {
 	for (GameComponent* object : objects) {
-		if (!object->isTransparent)
+		if (!object->isTransparent && object->shouldBeRendered)
 			object->Draw(context);
 	}
 }
 
-void DeferredSystem::DrawLighting(ID3D11DeviceContext* context)
+void DeferredSystem::DrawLighting(ID3D11DeviceContext* context, UINT width, UINT height)
 {
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
 	UINT strides = sizeof(UINT);
 	UINT offsets = 0;
 	context->IASetVertexBuffers(0, 1, &pointsBuffer, &strides, &offsets);
 
-	context->Draw(800 * 800, 0);
+	context->Draw(width * height, 0);
 }
 
 void DeferredSystem::DrawTransparent(ID3D11DeviceContext* context, std::vector<GameComponent*> objects, UINT mapSize)
 {
 	for (GameComponent* object : objects)
 	{
-		if (object->isTransparent)
+		if (object->isTransparent && object->shouldBeRendered)
 		{
 			Matrix transformMat = object->properties->transformW.Transpose();
 			transformMat *= object->properties->transformH.Transpose();
+			Vector4 nearestPoint = { 0.0f, 0.0f, -1.0f, 1.0f };
+			nearestPoint = Vector4::Transform(nearestPoint, transformMat);
 
 			for (int i = 0; i < 100; ++i)
 			{
-				int k = (int)abs(transformMat._43);
+				int k = (int)nearestPoint.z;
+				if (k < 0.0f)
+					break;
+
 				if (transpObjects[i][k] == NULL) {
 					transpObjects[i][k] = object;
 					break;

@@ -4,8 +4,8 @@
 
 Katamari::Katamari(HINSTANCE hinst, LPCTSTR hwindow) : Game(hinst, hwindow) {};
 
-void Katamari::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
-	Game::Initialize(objCnt, lightsCnt, mapSize);
+void Katamari::Initialize(UINT objCnt, UINT pointlightsCnt, UINT spotlightsCnt, UINT mapSize) {
+	Game::Initialize(objCnt, pointlightsCnt, spotlightsCnt, mapSize);
 
 	std::vector<Vector4> colors;
 
@@ -30,13 +30,14 @@ void Katamari::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
 	materialTypes.push_back(Metal);
 	objects[objects.size() - 1]->Initialize(device, objectTypes[objects.size() - 1], materialTypes[materialTypes.size() - 1], colors, LOD);
 	objects[objects.size() - 1]->collisionType = Static;
+	objects[objects.size() - 1]->isFloor = true;
 	/*for (int i = 0; i < objects[0]->pointsCnt; ++i)
 		objects[0]->(*points)[i].normal = Vector3(0.0f, 1.0f, 0.0f);*/
-	for (int i = 0; i < 500; ++i)
+	for (int i = 0; i < objCnt / 2; ++i)
 	{
 		objectTypes.push_back(Sphere);
 		objects.push_back(new GameComponent());
-		materialTypes.push_back(Plastic);
+		materialTypes.push_back(Glass);
 		objects[objects.size() - 1]->Initialize(device, objectTypes[objects.size() - 1], materialTypes[materialTypes.size() - 1], colors, LOD);
 		objects[objects.size() - 1]->collisionType = Dynamic;
 	}
@@ -98,6 +99,19 @@ void Katamari::Initialize(UINT objCnt, UINT lightsCnt, UINT mapSize) {
 		objects.push_back(new GameComponent(device, *objects[rand() % modelPaths.size() + firstModelIndex]));
 		objects[objects.size() - 1]->collisionType = Dynamic;
 	}
+
+	cullingDistance = 20000.0f;
+
+	const wchar_t* texturePath = (const wchar_t*)L"Game\\Objects\\unreal.png";
+
+	CD3D11_TEXTURE2D_DESC textureDesc(DXGI_FORMAT_R8G8B8A8_UNORM, 900, 900);
+
+	CD3D11_SHADER_RESOURCE_VIEW_DESC srvDesc(D3D11_SRV_DIMENSION_TEXTURE2D, textureDesc.Format);
+
+	DirectX::CreateWICTextureFromFile(device.Get(), texturePath, shadowResource.GetAddressOf(), shadowTexture.GetAddressOf());
+	//DebugBreak();
+	HRESULT hr = device->CreateShaderResourceView(shadowResource.Get(), &srvDesc, shadowTexture.GetAddressOf());
+
 	ResetGame();
 }
 
@@ -107,7 +121,7 @@ void Katamari::Update(float deltaTime)
 	controller->UpdatePos(input, objects[camManager->objectToTrack]);
 
 #ifdef LIGHTTRACKING
-	for (int i = 0; i < lightBufData->lightsNum; ++i)
+	for (int i = 0; i < lightBufData->Data.x; ++i)
 	{
 		lightBufData->pointLights[i].position = Vector4::Transform(lightsPos[i], objects[1]->rotation) + objects[1]->translation;
 	}
@@ -147,12 +161,29 @@ void Katamari::Update(float deltaTime)
 	sceneBounds.center = objects[camManager->objectToTrack]->translation;
 
 	sceneBounds.radius = objects[0]->scale.x;
+
+	if (input->IsKeyDown(Keys::MouseButtonX1))
+	{
+		input->RemovePressedKey(Keys::MouseButtonX1);
+		for (int i = 0; i < lightBufData->Data.y; ++i)
+		{
+			Vector3 direction = ClickPos();
+			/*direction.Normalize(direction);
+
+			lightBufData->spotLights[i].cone.x = direction.x;
+			lightBufData->spotLights[i].cone.y = direction.y;
+			lightBufData->spotLights[i].cone.z = direction.z;*/
+		}
+	}
+
 	Game::Update(deltaTime);
 }
 
 void Katamari::ResetGame()
 {
 	objects[0]->scale = Vector3(mapSize / 2.0f, 0.1f, mapSize / 2.0f);
+	objects[0]->boxCollider.Center = objects[0]->translation;
+	objects[0]->boxCollider.Extents = objects[0]->scale;
 
 	objects[1]->scale = Vector3(100.0f, 100.0f, 100.0f);
 	objects[1]->translation = Vector3(0.0f, 100.0f, 0.0f);
@@ -190,29 +221,38 @@ void Katamari::ResetGame()
 
 	camManager->SetCameraView(objects[camManager->objectToTrack]->translation, Vector3(0.0f, objects[camManager->objectToTrack]->scale.x * 2.0f, objects[camManager->objectToTrack]->scale.x * 7.0f));
 
+	//SetCursorPos( GetSystemMetrics(SM_CXSCREEN) / 2.0f, GetSystemMetrics(SM_CYSCREEN) / 2.0f);
+
 	lightBufData->dirLight.ambient = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
 	lightBufData->dirLight.diffuse = Vector4(0.25f, 0.25f, 0.25f, 1.0f);
 	lightBufData->dirLight.specular = Vector4(0.5f, 0.5f, 0.5f, 1.0f);
 	lightBufData->dirLight.direction = Vector4(-0.5f, -0.5f, -0.5f, 1.0f);
-	
+
 	for (int i = 0; i < (int) lightBufData->Data.x; ++i)
 	{
-		lightBufData->pointLights[i].diffuse = Vector4(0.007f, 0.007f, 0.007f, 1.0f);
-		lightBufData->pointLights[i].specular = Vector4(0.07f, 0.07f, 0.07f, 1.0f);
-		lightBufData->pointLights[i].attenuation = Vector4(0.0f, 0.0003f, 0.0f, 5000.0f);
+		lightBufData->pointLights[i].diffuse = Vector4(((rand() % 100) - 50) / 100.0f, ((rand() % 100) - 50) / 100.0f, ((rand() % 100) - 50) / 100.0f, 1.0f);
+		//lightBufData->pointLights[i].specular = Vector4(0.07f, 0.07f, 0.07f, 1.0f);
+		//lightBufData->pointLights[i].specular = Vector4((rand() % 100) / 100.0f, (rand() % 100) / 100.0f, (rand() % 100) / 100.0f, 1.0f);
+		// - 50 is for pretty colors, but thats wrong XD
+		lightBufData->pointLights[i].specular = lightBufData->pointLights[i].diffuse;
 		lightBufData->pointLights[i].position = Vector4((float)random1(rng) - randomRange / 2, 1000.0f, (float)random1(rng) - randomRange / 2, 1.0f);
-		lightsPos.push_back(Vector3(rand() % 3000 - 1500.0f, rand() % 3000 - 1500.0f, rand() % 3000 - 1500.0f));
+		lightBufData->pointLights[i].attenuation = Vector4(0.0f, 0.0001f, 0.0f, 10000.0f);
 
 #ifdef LIGHTTRACKING
+		lightsPos.push_back(Vector3(rand() % 3000 - 1500.0f, rand() % 3000 - 1500.0f, rand() % 3000 - 1500.0f));
 		lightsPos[i].Normalize();
 		lightsPos[i] *= objects[camManager->objectToTrack]->sphereCollider.Radius;
 #endif
-		//
-		//lightBufData->pointLights[i].specular = Vector4((rand() % 100) / 100.0f, (rand() % 100) / 100.0f, (rand() % 100) / 100.0f, 1.0f);
-		// - 50 is for pretty colors, but thats wrong XD
-		lightBufData->pointLights[i].specular = Vector4(((rand() % 100) - 50) / 100.0f, ((rand() % 100) - 50) / 100.0f, ((rand() % 100) - 50) / 100.0f, 1.0f);
 		//lightPosL = Vector4(objects[2]->translation);
 	}
 
-	//NEW
+	for (int i = 0; i < (int)lightBufData->Data.y; ++i)
+	{
+		lightBufData->spotLights[i].diffuse = Vector4(((rand() % 100) - 50) / 100.0f, ((rand() % 100) - 50) / 100.0f, ((rand() % 100) - 50) / 100.0f, 1.0f);
+		//lightBufData->spotLights[i].specular = Vector4(0.07f, 0.07f, 0.07f, 1.0f);
+		lightBufData->spotLights[i].specular = lightBufData->spotLights[i].diffuse;
+		lightBufData->spotLights[i].position = Vector4((float)random1(rng) - randomRange / 2, 500.0f, (float)random1(rng) - randomRange / 2, 1.0f);
+		lightBufData->spotLights[i].attenuation = Vector4(0.0f, 0.0001f, 0.0f, 10000.0f);
+		lightBufData->spotLights[i].cone = Vector4(0.0f, -1.0f, 0.0f, 2.0f);
+	}
 }

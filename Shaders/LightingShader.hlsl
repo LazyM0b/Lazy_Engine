@@ -33,12 +33,23 @@ struct PointLight
 	float4 attenuation;
 };
 
+struct SpotLight 
+{
+	float4 diffuse;
+	float4 specular;
+
+	float4 position;
+	float4 attenuation;
+	float4 cone;
+};
+
 static const int CascadesCount = 4;
 
 cbuffer Lightning : register(b0)
 {
 	DirectionalLight dirLight;
-	PointLight pointLight[800];
+	PointLight pointLights[400];
+	SpotLight spotLights[400];
 	float4 eyePos;
 	float4x4 transformHInv;
     float4 data;
@@ -51,14 +62,17 @@ cbuffer Cascades : register(b1)
 	float4 distances[CascadesCount / 4];
 	float4 playerPos;
 };
-Texture2D<float4> PosW : register(t0);
-Texture2D<float4> PosH : register(t1);
+
+Texture2D<float4> PosH : register(t0);
+Texture2D<float4> PosW : register(t1);
 Texture2D<float4> Ambient : register(t2);
 Texture2D<float4> Diffuse : register(t3);
 Texture2D<float4> Specular : register(t4);
 Texture2D<float4> Normal : register(t5);
 
 Texture2DArray shadowMap : TEXTUREARRAY : register(t6);
+
+Texture2D<float> shadowTexture : register(t7);
 
 SamplerState objSampler : SAMPLER : register(s0);
 
@@ -115,10 +129,43 @@ void ComputePointLight (float4 difColor, float4 specColor, PointLight light, flo
 	
 	diffuse *= attenuation;
 	specular *= attenuation;
-
 	//for gradient
 	if (d > light.attenuation.w / 2)
-		specular *= 1.0f - (d - light.attenuation.w / 2) / (light.attenuation.w / 2);
+	{
+		diffuse *= 1.0f - (d - light.attenuation.w / 2.0f) / (light.attenuation.w / 2.0f);
+		specular *= 1.0f - (d - light.attenuation.w / 2.0f) / (light.attenuation.w / 2.0f);
+	}
+}
+
+void ComputeSpotLight (float4 difColor, float4 specColor, SpotLight light, float3 pos, float3 norm, float3 eye, out float4 diffuse, out float4 specular) 
+{
+	diffuse = float4(0.0f, 0.0f, 0.0f, 0.0f);
+	specular = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	float3 lightVector = light.position.xyz - pos;
+	float d = length(lightVector);
+
+
+	if (d > light.attenuation.w)
+		return;
+
+	lightVector /= d;
+	
+	float dif = dot(lightVector, norm);
+	
+	[FLATTEN] if (dif > 0.0f)
+	{
+		float3 v = reflect(-lightVector, norm);
+		float spec = pow(max(dot(v, eye), 0.0f), specColor.w);
+
+		diffuse = dif * difColor * light.diffuse;
+		specular = spec * specColor * light.specular;
+	}
+	float spot = pow(max(dot(-lightVector, light.cone.xyz), 0.0f), light.cone.w);
+	float attenuation = spot / dot(light.attenuation.xyz, float3(1.0f, d, d*d));
+	
+	diffuse *= attenuation;
+	specular *= attenuation;
 }
 
 //SHADOWS
@@ -126,7 +173,7 @@ static const float SHADOWMAP_SIZE = 8192.0f;
 
 static const float SHADOWMAP_DX = 1.0f / SHADOWMAP_SIZE;
 
-float CalcShadowFactor(SamplerComparisonState shadowSampler, Texture2DArray shadowMap, float4 pos, int layer)
+float CalcShadowFactor(SamplerComparisonState shadowSampler, Texture2DArray shadowMap, SamplerState objSampler, Texture2D<float> shadowTexture, float4 pos, int layer)
 {
 	pos.xyz /= pos.w;
 
@@ -148,8 +195,9 @@ float CalcShadowFactor(SamplerComparisonState shadowSampler, Texture2DArray shad
     {
         percent += shadowMap.SampleCmp(shadowSampler, float3(pos.xy + offsets[i], layer), depth).r;
     };
+	percent /= 9.0f;
 
-	return percent /= 9.0f;
+	return percent;
 }
 //END
 
@@ -157,15 +205,17 @@ PS_IN VSMain( VS_IN input)
 {
 	PS_IN output = (PS_IN)0;
 
-	output.tex = float2((int)input.pos % 800, (int)input.pos / 800);
-	output.pos = float4(output.tex / 800 * float2(2, -2) + float2(-1, 1), 0, 1);
+	output.tex = float2((int)input.pos % 1080, (int)input.pos / 1080);
+
+	float4 posN = PosH.Load(int3(output.tex, 0));
+	output.pos = float4(output.tex / 1080 * float2(2, -2) + float2(-1, 1), 0, 1);
+	output.pos.z = posN.z / 80000.0f;
+    //output.pos.z = (output.pos.y + 1) / 2.0f;
 	return output;
 }
 
 float4 PSMain( PS_IN input ) : SV_Target
 {
-	float4 posN = PosH.Load(int3(input.tex, 0));
-	posN = float4(posN.xyz / posN.w, posN.w);
 	float4 posW =  PosW.Load(int3(input.tex, 0));
 	//float4 posW =  mul(posN, transformHInv);
 	float4 ambColor = Ambient.Load(int3(input.tex, 0));
@@ -173,13 +223,8 @@ float4 PSMain( PS_IN input ) : SV_Target
 	float4 specColor = Specular.Load(int3(input.tex, 0));
 	float4 norm = Normal.Load(int3(input.tex, 0));
 	
-	/*
-	if (input.tex.x != 0.0f && input.tex.y != 0.0f) 
-		col = objTexture.Sample(objSampler, input.tex);
-	*/
-
 	float4 col;
-	if ((dirLight.diffuse.w != 0.0f || pointLight[0].diffuse.w != 0.0f) && (difColor.x + difColor.y + difColor.z != 3.0f)) {
+	if ((dirLight.diffuse.w != 0.0f || pointLights[0].diffuse.w != 0.0f || spotLights[0].diffuse.w != 0.0f) && (difColor.x + difColor.y + difColor.z != 3.0f)) {
 		float3 eyeVec = normalize(float3(eyePos.xyz) - posW.xyz);
         
 		float4 ambient = float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -222,8 +267,11 @@ float4 PSMain( PS_IN input ) : SV_Target
 
 		float4 posS = mul(posW, transformS[layer]);
 		float4 shadow = float4 (1.0f, 1.0f, 1.0f, 1.0f);
+		
+		shadow *= CalcShadowFactor(shadowSampler, shadowMap, objSampler, shadowTexture, posS, layer);
 
-		shadow *= CalcShadowFactor(shadowSampler, shadowMap, posS, layer);
+		if (shadow.a < 1.0f)
+			shadow = shadowTexture.Sample(objSampler, float2(abs((int)posW.x) % 200 / 200.0f, abs((int)posW.z) % 200 / 200.0f));
 
 		ComputeDirectionalLight(difColor, specColor, dirLight, norm.xyz, eyeVec.xyz, amb, dif, spec);
 
@@ -262,25 +310,31 @@ float4 PSMain( PS_IN input ) : SV_Target
 
         for (int i = 0; i < (int)data.x; ++i)
         {
-            ComputePointLight(difColor, specColor, pointLight[i], posW.xyz, norm.xyz, eyeVec.xyz, dif, spec);
+            ComputePointLight(difColor, specColor, pointLights[i], posW.xyz, norm.xyz, eyeVec.xyz, dif, spec);
 
             diffuse += dif;
             specular += spec;
         }
-		
+
+        for (int i = 0; i < (int)data.y; ++i)
+        {
+            ComputeSpotLight(difColor, specColor, spotLights[i], posW.xyz, norm.xyz, eyeVec.xyz, dif, spec);
+
+            diffuse += dif;
+            specular += spec;
+        }
 
        col =  ambient + diffuse + specular;
-		
 		col.w = difColor.w;
     }
 
-	if ((int)data.y == 2)
-		col = posN;
-	else if ((int)data.y == 3)
+	if ((int)data.z == 2)
+		col = posW;
+	else if ((int)data.z == 3)
 		col = difColor;
-	else if ((int)data.y == 4)
+	else if ((int)data.z == 4)
 		col = specColor;
-	else if ((int)data.y == 5)
+	else if ((int)data.z == 5)
 		col = norm;
 	return col;
 }

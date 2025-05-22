@@ -62,6 +62,8 @@ public:
 	bool isMovable = false;
 	bool isPlayerControllable = false;
 	bool isTransparent = false;
+	bool shouldBeRendered = true;
+	bool isFloor = false;
 	UINT pointsCnt;
 	DirectX::BoundingBox boxCollider;
 	DirectX::BoundingSphere sphereCollider;

@@ -31,6 +31,7 @@ GameComponent::GameComponent(Microsoft::WRL::ComPtr<ID3D11Device> device, const 
 	this->properties = new objectProps(*other.properties);
 	this->parent = other.parent;
 	this->distanceToParent = other.distanceToParent;
+	this->isTransparent = other.isTransparent;
 	TriangleComponent::Initialize(device);
 }
 
@@ -381,16 +382,16 @@ void GameComponent::InitializeMaterial(const MaterialTypes& matType)
 	case Rubber:
 		break;
 	case Plastic:
-		properties->material.diffuse = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
-		properties->material.specular = Vector4(0.1f, 0.1f, 0.1f, 1.0f);
+		properties->material.diffuse = Vector4(0.75f, 0.75f, 0.75f, 1.0f);
+		properties->material.specular = Vector4(0.25f, 0.25f, 0.25f, 10.0f);
 		break;
 	case Metal:
-		properties->material.diffuse = Vector4(0.2775f, 0.2775f, 0.2775f, 1.0f);
+		properties->material.diffuse = Vector4(0.15f, 0.15f, 0.15f, 1.0f);
 		properties->material.specular = Vector4(0.773911f, 0.773911f, 0.773911f, 100.0f);
 		break;
 	case Glass:
 		properties->material.diffuse = Vector4(0.1f, 0.1f, 0.1f, 0.2f);
-		properties->material.specular = Vector4(0.773911f, 0.773911f, 0.773911f, 150.0f);
+		properties->material.specular = Vector4(0.973911f, 0.973911f, 0.973911f, 150.0f);
 		break;
 	default:
 		break;

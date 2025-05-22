@@ -113,7 +113,7 @@ int ShadersComponent::Initialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 
 	device->CreateInputLayout(
 		opaqueInputElements,
-		sizeof(opaqueInputElements) / sizeof (D3D11_INPUT_ELEMENT_DESC),
+		sizeof(opaqueInputElements) / sizeof(D3D11_INPUT_ELEMENT_DESC),
 		opaqueVertexShaderByteCode->GetBufferPointer(),
 		opaqueVertexShaderByteCode->GetBufferSize(),
 		&opaqueLayout);
@@ -229,6 +229,114 @@ int ShadersComponent::Initialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 	shadowSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
 
 	res = device->CreateSamplerState(&shadowSamplerDesc, &shadowSampler);
+
+	//create transparent vertex shader
+	res = D3DCompileFromFile(L"./Shaders/MyVeryFirstShader.hlsl",
+		nullptr /*macros*/,
+		nullptr /*include*/,
+		"VSMain",
+		"vs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&transparentVertexShaderByteCode,
+		&errorVertexCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorVertexCode) {
+			char* compileErrors = (char*)(errorVertexCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"LightingShader.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreateVertexShader(
+		transparentVertexShaderByteCode->GetBufferPointer(),
+		transparentVertexShaderByteCode->GetBufferSize(),
+		nullptr, &transparentVertexShader);
+
+	//create lighting pixel shader
+	res = D3DCompileFromFile(L"./Shaders/MyVeryFirstShader.hlsl",
+		Shader_Macros /*macros*/,
+		nullptr /*include*/,
+		"PSMain",
+		"ps_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&transparentPixelShaderByteCode,
+		&errorPixelCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorPixelCode) {
+			char* compileErrors = (char*)(errorPixelCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"LightingShader.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreatePixelShader(
+		transparentPixelShaderByteCode->GetBufferPointer(),
+		transparentPixelShaderByteCode->GetBufferSize(),
+		nullptr, &transparentPixelShader);
+
+	//create lighting input layout
+	D3D11_INPUT_ELEMENT_DESC transparentInputElements[] = {
+		D3D11_INPUT_ELEMENT_DESC {
+			"POSITION",
+			0,
+			DXGI_FORMAT_R32G32B32A32_FLOAT,
+			0,
+			0,
+			D3D11_INPUT_PER_VERTEX_DATA,
+			0},
+		D3D11_INPUT_ELEMENT_DESC {
+			"COLOR",
+			0,
+			DXGI_FORMAT_R32G32B32A32_FLOAT,
+			0,
+			D3D11_APPEND_ALIGNED_ELEMENT,
+			D3D11_INPUT_PER_VERTEX_DATA,
+			0},
+		D3D11_INPUT_ELEMENT_DESC {
+			"NORMAL",
+			0,
+			DXGI_FORMAT_R32G32B32_FLOAT,
+			0,
+			D3D11_APPEND_ALIGNED_ELEMENT,
+			D3D11_INPUT_PER_VERTEX_DATA,
+			0},
+		D3D11_INPUT_ELEMENT_DESC {
+			"TEXCOORD",
+			0,
+			DXGI_FORMAT_R32G32_FLOAT,
+			0,
+			D3D11_APPEND_ALIGNED_ELEMENT,
+			D3D11_INPUT_PER_VERTEX_DATA,
+			0}
+	};
+
+	device->CreateInputLayout(
+		transparentInputElements,
+		sizeof(transparentInputElements) / sizeof(D3D11_INPUT_ELEMENT_DESC),
+		transparentVertexShaderByteCode->GetBufferPointer(),
+		transparentVertexShaderByteCode->GetBufferSize(),
+		&transparentLayout);
+
 	return 1;
 }
 
@@ -251,7 +359,18 @@ void ShadersComponent::DrawLighting(ID3D11DeviceContext* context)
 	context->IASetInputLayout(lightingLayout);
 	context->VSSetShader(lightingVertexShader, nullptr, 0);
 	context->PSSetShader(lightingPixelShader, nullptr, 0);
+	context->PSSetSamplers(0, 1, &textureSampler);
 	context->PSSetSamplers(1, 1, &shadowSampler);
-	//for lighting
-	//context->PSSetSamplers(1, 1, &shadowSampler);
+}
+
+void ShadersComponent::DrawTransparent(ID3D11DeviceContext* context)
+{
+
+	context->RSSetState(rastState);
+
+	context->IASetInputLayout(transparentLayout);
+	context->VSSetShader(transparentVertexShader, nullptr, 0);
+	context->PSSetShader(transparentPixelShader, nullptr, 0);
+	context->PSSetSamplers(0, 1, &textureSampler);
+	context->PSSetSamplers(1, 1, &shadowSampler);
 }

@@ -62,6 +62,11 @@ LRESULT CALLBACK DisplayWin32::WndProc(HWND hwnd, UINT umessage, WPARAM wparam, 
 		delete[] lpb;
 		return DefWindowProc(hwnd, umessage, wparam, lparam);
 	}
+	case WM_LBUTTONDOWN:
+	{
+		Game* game = Game::instance;
+		game->input->AddPressedKey(Keys::MouseButtonX1);
+	}
 	default:
 	{
 		return DefWindowProc(hwnd, umessage, wparam, lparam);
@@ -115,7 +120,7 @@ HWND DisplayWin32::Init(HINSTANCE hInst, LPCWSTR appName) {
 	SetForegroundWindow(hWindow);
 	SetFocus(hWindow);
 
-	ShowCursor(false);
+	ShowCursor(true);
 
 	return hWindow;
 }

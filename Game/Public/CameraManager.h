@@ -13,6 +13,7 @@ public:
 	void RotateCamera(Quaternion rotVector);
 	void UpdatePos(InputDevice* input, const Vector3& objPos, UINT width, UINT height, Vector3* playerImpulse = nullptr);
 	void Initialize(float aspectRatio, int FOV = 1.57f);
+	Vector3 GetForwardVector() { return forwardVector; };
 
 	int objectToTrack = -1;
 	bool isStationary = 1;
