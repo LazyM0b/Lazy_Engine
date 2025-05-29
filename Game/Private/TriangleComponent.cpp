@@ -11,7 +11,6 @@ void TriangleComponent::Initialize(Microsoft::WRL::ComPtr<ID3D11Device> device) 
 	vertexBufDesc.CPUAccessFlags = 0;
 	vertexBufDesc.MiscFlags = 0;
 	vertexBufDesc.StructureByteStride = 0;
-	int i = sizeof(Vertex);
 	vertexBufDesc.ByteWidth = sizeof(Vertex) * std::size(*points);
 
 	D3D11_SUBRESOURCE_DATA vertexData = {};

@@ -84,6 +84,8 @@ void Game::Initialize(UINT objCnt, UINT pointLightsCnt, UINT spotLightsCnt, UINT
 	renderingSystem = new DeferredSystem();
 	renderingSystem->Initialize(device, clientWidth, clientHeight, mapSize);
 	//
+
+	//Initialize particle systems
 }
 
 void Game::PrepareResources() {
@@ -222,7 +224,18 @@ void Game::Run() {
 		shaders->DrawTransparent(context);
 
 		renderingSystem->DrawTransparent(context, objects, mapSize);
-		
+
+		context->ClearState();
+
+		context->OMSetRenderTargets(1, &renderView, depthStencilView);
+
+		PrepareParticles();
+
+		particleSystems.SortParticles(context, shaders);
+
+		shaders->DrawParticles(context);
+
+		particleSystems.Draw(context);
 
 		swapChain->Present(0, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
 
@@ -345,6 +358,18 @@ void Game::PrepareTransparent()
 
 		context->Unmap(cascadeShadowPropsBuffer, 0);
 	}
+}
+
+
+void Game::PrepareParticles()
+{
+	PrepareViewport();
+
+	float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	context->OMSetBlendState(blendState, blendFactors, 0xffffffff);
+
+	particleSystems.properties.ViewMatrix = camManager->viewMatrix;
+	particleSystems.properties.ProjectionMatrix = camManager->projectionMatrix;
 }
 
 void Game::Update(float deltaTime) {
@@ -555,4 +580,8 @@ Vector2 Game::ClickPos()
 	//printf("%f %f %f\n", traceSphere.Center.x, traceSphere.Center.y, traceSphere.Center.z);
 
 	return oldPos;
+}
+
+void Game::AddParticleSystem(ParticleSystemType systemType, UINT particlesNum, Vector4 spawnPoint)
+{
 }

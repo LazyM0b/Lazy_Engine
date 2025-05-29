@@ -28,8 +28,8 @@ int main()
 
 	//Lab 4
 	Katamari Katamari(hinst, applicationName4);
-
-	Katamari.Initialize(2000, 0, 400, 80000);
+	
+	Katamari.Initialize(2000, 100, 100, 80000);
 
 	Katamari.PrepareResources();
 

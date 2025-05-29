@@ -112,6 +112,8 @@ void Katamari::Initialize(UINT objCnt, UINT pointlightsCnt, UINT spotlightsCnt, 
 	//DebugBreak();
 	HRESULT hr = device->CreateShaderResourceView(shadowResource.Get(), &srvDesc, shadowTexture.GetAddressOf());
 
+	particleSystems.AddParticleSystem(device, Fountain, 10000, Vector4::Zero);
+
 	ResetGame();
 }
 

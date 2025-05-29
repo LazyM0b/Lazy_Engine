@@ -262,7 +262,7 @@ int ShadersComponent::Initialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 		transparentVertexShaderByteCode->GetBufferSize(),
 		nullptr, &transparentVertexShader);
 
-	//create lighting pixel shader
+	//create transparent pixel shader
 	res = D3DCompileFromFile(L"./Shaders/MyVeryFirstShader.hlsl",
 		Shader_Macros /*macros*/,
 		nullptr /*include*/,
@@ -337,6 +337,190 @@ int ShadersComponent::Initialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 		transparentVertexShaderByteCode->GetBufferSize(),
 		&transparentLayout);
 
+	//create particles vertex shader
+	res = D3DCompileFromFile(L"./Shaders/FountainShader.hlsl",
+		nullptr /*macros*/,
+		nullptr /*include*/,
+		"VSMain",
+		"vs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&particlesVertexShaderByteCode,
+		&errorVertexCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorVertexCode) {
+			char* compileErrors = (char*)(errorVertexCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"FountainShader.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreateVertexShader(
+		particlesVertexShaderByteCode->GetBufferPointer(),
+		particlesVertexShaderByteCode->GetBufferSize(),
+		nullptr, &particlesVertexShader);
+
+	//create particles pixel shader
+	res = D3DCompileFromFile(L"./Shaders/FountainShader.hlsl",
+		Shader_Macros /*macros*/,
+		nullptr /*include*/,
+		"PSMain",
+		"ps_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&particlesPixelShaderByteCode,
+		&errorPixelCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorPixelCode) {
+			char* compileErrors = (char*)(errorPixelCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"FountainShader.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreatePixelShader(
+		particlesPixelShaderByteCode->GetBufferPointer(),
+		particlesPixelShaderByteCode->GetBufferSize(),
+		nullptr, &particlesPixelShader);
+
+	ID3DBlob* errorComputeCode = nullptr;
+
+	//create particles compute shader
+	res = D3DCompileFromFile(L"./Shaders/FountainShader.hlsl",
+		Shader_Macros /*macros*/,
+		nullptr /*include*/,
+		"CSMain",
+		"cs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&particlesComputeShaderByteCode,
+		&errorComputeCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorComputeCode) {
+			char* compileErrors = (char*)(errorComputeCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"FountainShader.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreateComputeShader(
+		particlesComputeShaderByteCode->GetBufferPointer(),
+		particlesComputeShaderByteCode->GetBufferSize(),
+		nullptr, &particlesComputeShader);
+
+
+	//create particles compute sort shader
+	res = D3DCompileFromFile(L"./Shaders/ComputeShaderSort.hlsl",
+		Shader_Macros /*macros*/,
+		nullptr /*include*/,
+		"BitonicSort",
+		"cs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&particlesComputeSortShaderByteCode,
+		&errorComputeCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorComputeCode) {
+			char* compileErrors = (char*)(errorComputeCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"ComputeShaderSort.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreateComputeShader(
+		particlesComputeSortShaderByteCode->GetBufferPointer(),
+		particlesComputeSortShaderByteCode->GetBufferSize(),
+		nullptr, &particlesComputeSortShader);
+
+
+	//create particles compute transpose shader
+	res = D3DCompileFromFile(L"./Shaders/ComputeShaderSort.hlsl",
+		Shader_Macros /*macros*/,
+		nullptr /*include*/,
+		"MatrixTranspose",
+		"cs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&particlesComputeTransposeShaderByteCode,
+		&errorComputeCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorComputeCode) {
+			char* compileErrors = (char*)(errorComputeCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"ComputeShaderSort.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreateComputeShader(
+		particlesComputeTransposeShaderByteCode->GetBufferPointer(),
+		particlesComputeTransposeShaderByteCode->GetBufferSize(),
+		nullptr, &particlesComputeTransposeShader);
+
+
+	//create lighting input layout
+	D3D11_INPUT_ELEMENT_DESC particlesInputElements[] = {
+		D3D11_INPUT_ELEMENT_DESC {
+			"INDEX",
+			0,
+			DXGI_FORMAT_R32_UINT,
+			0,
+			0,
+			D3D11_INPUT_PER_VERTEX_DATA,
+			0}
+	};
+
+	device->CreateInputLayout(
+		particlesInputElements,
+		sizeof(particlesInputElements) / sizeof(D3D11_INPUT_ELEMENT_DESC),
+		particlesVertexShaderByteCode->GetBufferPointer(),
+		particlesVertexShaderByteCode->GetBufferSize(),
+		&particlesLayout);
+
 	return 1;
 }
 
@@ -373,4 +557,24 @@ void ShadersComponent::DrawTransparent(ID3D11DeviceContext* context)
 	context->PSSetShader(transparentPixelShader, nullptr, 0);
 	context->PSSetSamplers(0, 1, &textureSampler);
 	context->PSSetSamplers(1, 1, &shadowSampler);
+}
+
+void ShadersComponent::DrawParticles(ID3D11DeviceContext* context)
+{
+	context->RSSetState(rastState);
+
+	//context->IASetInputLayout(particlesLayout);
+	context->VSSetShader(particlesVertexShader, nullptr, 0);
+	context->PSSetShader(particlesPixelShader, nullptr, 0);
+	context->CSSetShader(particlesComputeShader, nullptr, 0);
+}
+
+void ShadersComponent::SortParticles(ID3D11DeviceContext* context)
+{
+	context->CSSetShader(particlesComputeSortShader, nullptr, 0);
+}
+
+void ShadersComponent::TransposeParticles(ID3D11DeviceContext* context)
+{
+	context->CSSetShader(particlesComputeTransposeShader, nullptr, 0);
 }

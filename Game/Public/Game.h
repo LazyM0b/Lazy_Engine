@@ -15,6 +15,7 @@
 #include "DeferredRenderingComponent.h"
 #include "ShadowsComponent.h"
 #include "GameComponent.h"
+#include "ParticleSystem.h"
 #include "SimpleMath.h"
 #include "Math.h"
 #include "conio.h"
@@ -35,6 +36,7 @@ public:
 	void PrepareOpaque();
 	void PrepareLighting();
 	void PrepareTransparent();
+	void PrepareParticles();
 	virtual void Update(float deltaTime);
 	void UpdateInternal(); //?
 	void RestoreTargets(int viewsCnt = 0, ID3D11RenderTargetView* const* RenderView = nullptr, ID3D11DepthStencilView* DepthStencilView = nullptr); // done
@@ -48,6 +50,8 @@ public:
 	void CullBackward();
 	//END
 	Vector2 ClickPos();
+
+	void AddParticleSystem(ParticleSystemType systemType, UINT particlesNum, Vector4 origin);
 
 	DisplayWin32* display;
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
@@ -90,6 +94,8 @@ public:
 	CameraManager* camManager;
 	PlayerController* controller;
 	//GameTimer timer;
+
+	ParticleSystemComponent particleSystems;
 
 	std::chrono::time_point<std::chrono::steady_clock> PrevTime;
 	Vector4 spotLightPos;

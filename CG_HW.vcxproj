@@ -30,6 +30,7 @@
     <ClInclude Include="Game\Public\Katamari.h" />
     <ClInclude Include="Game\Public\Keys.h" />
     <ClInclude Include="Game\Public\LightningComponent.h" />
+    <ClInclude Include="Game\Public\ParticleSystem.h" />
     <ClInclude Include="Game\Public\PlayerController.h" />
     <ClInclude Include="Game\Public\ShadersComponent.h" />
     <ClInclude Include="Game\Public\ShadowsComponent.h" />
@@ -49,6 +50,7 @@
     <ClCompile Include="Game\Private\InputDevice.cpp" />
     <ClCompile Include="Game\Private\Katamari.cpp" />
     <ClCompile Include="Game\Private\LightningComponent.cpp" />
+    <ClCompile Include="Game\Private\ParticleSystem.cpp" />
     <ClCompile Include="Game\Private\PlayerController.cpp" />
     <ClCompile Include="Game\Private\ShadersComponent.cpp" />
     <ClCompile Include="Game\Private\ShadowsComponent.cpp" />
@@ -81,6 +83,17 @@
     <None Include="Shaders\LightingShader.hlsl">
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Effect</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\FountainShader.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\ComputeShaderSort.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
