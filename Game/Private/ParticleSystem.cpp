@@ -40,8 +40,9 @@ void ParticleSystem::InitParticle(int index)
 	Particle* particle = &(*particleList)[index];
 	particle->pos = origin;
 	particle->velocity = Vector3((rand() % 80 - 40) / 50.0f, 1.0f, (rand() % 80 - 40) / 50.0f);
-	particle->color = Vector4((rand() % 100 - 50) / 50.0f, (rand() % 100 - 50) / 50.0f, (rand() % 100 - 50) / 50.0f, (rand() % 100 - 50) / 50.0f);
-	particle->size = Vector2((rand() % 50 + 50) / 100.0f * 10.0f, (rand() % 50 + 50) / 100.0f * 10.0f);
+	particle->color = Vector4((rand() % 100 - 50) / 50.0f, (rand() % 100 - 50) / 50.0f, (rand() % 100 - 50) / 50.0f, (rand() % 100) / 100.0f);
+	float tmp = (rand() % 50 + 50) / 100.0f * 100.0f;
+	particle->size = Vector2(tmp, tmp);
 }
 
 void ParticleSystemComponent::AddParticleSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ParticleSystemType type, UINT particlesNum, Vector4 spawnPoint)
@@ -57,26 +58,15 @@ void ParticleSystemComponent::PrepareParticleSystems(ID3D11DeviceContext* contex
 void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, size_t index)
 {
 	systems[index]->InitSystem();
-	indexList.push_back(std::vector<int>());
-	for (int i = 0; i < systems[index]->maxParticles; ++i)
-	{
-		indexList[index].push_back(i * 4 + 0);
-		indexList[index].push_back(i * 4 + 1);
-		indexList[index].push_back(i * 4 + 2);
 
-		indexList[index].push_back(i * 4 + 1);
-		indexList[index].push_back(i * 4 + 0);
-		indexList[index].push_back(i * 4 + 3);
-	}
-
-	//Init particles buffers
+	//Init particles buffer, Shader resource view and unordered access view
 	D3D11_BUFFER_DESC particlesBufDesc = {};
 	particlesBufDesc.Usage = D3D11_USAGE_DEFAULT;
 	particlesBufDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	particlesBufDesc.CPUAccessFlags = 0;
 	particlesBufDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 	particlesBufDesc.StructureByteStride = sizeof(Particle);
-	particlesBufDesc.ByteWidth = sizeof(Particle) * systems[0]->maxParticles;
+	particlesBufDesc.ByteWidth = sizeof(Particle) * systems[index]->maxParticles;
 
 	D3D11_SUBRESOURCE_DATA particlesData = {};
 	particlesData.pSysMem = &(*systems[index]->particleList).front();
@@ -92,6 +82,38 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 	particleStrides = sizeof(Particle);
 	particleOffsets = 0;
 
+	ID3D11ShaderResourceView* particleSRV;
+	device->CreateShaderResourceView(particlesBuffers[index], nullptr, &particleSRV);
+	particlesSRV.push_back(particleSRV);
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+	uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+	uavDesc.Buffer = D3D11_BUFFER_UAV{
+		0,
+		(UINT)systems[0]->maxParticles,
+		0
+	};
+
+	ID3D11UnorderedAccessView* particleUAV;
+	device->CreateUnorderedAccessView(particlesBuffers[index], &uavDesc, &particleUAV);
+	particlesUAV.push_back(particleUAV);
+
+
+	//Fill index list
+	indexList.push_back(std::vector<int>());
+	for (int i = 0; i < systems[index]->maxParticles; ++i)
+	{
+		indexList[index].push_back(0);
+		indexList[index].push_back(1);
+		indexList[index].push_back(2);
+
+		indexList[index].push_back(1);
+		indexList[index].push_back(0);
+		indexList[index].push_back(3);
+	}
+
+	//Init indexes buffer
 	D3D11_BUFFER_DESC indexBufDesc = {};
 	indexBufDesc.Usage = D3D11_USAGE_DEFAULT;
 	indexBufDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
@@ -120,8 +142,8 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 	argsBufferDesc.ByteWidth = sizeof(DrawArgs);
 
 	DrawArgs args;
-	args.IndexCountPerInstance = systems[index]->numParticles * 6;
-	args.InstanceCount = 1;
+	args.IndexCountPerInstance = 6;
+	args.InstanceCount = systems[index]->maxParticles;
 	args.StartIndexLocation = 0;
 	args.BaseVertexLocation = 0;
 	args.StartInstanceLocation = 0;
@@ -144,6 +166,7 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 
 	device->CreateBuffer(&objectBufDesc, 0, &propsBuffer);
 
+	//Init sort (particle depth) list - buffer, SRV and UAV
 	D3D11_BUFFER_DESC particleDepthBufDesc = {};
 	particleDepthBufDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
 	particleDepthBufDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -168,32 +191,15 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 	device->CreateBuffer(&particleDepthBufDesc, &initSortData, &sortDataBuffer);
 	sortDataBuffers.push_back(sortDataBuffer);
 
-	ID3D11ShaderResourceView* particleSRV;
-	device->CreateShaderResourceView(particlesBuffers[index], nullptr, &particleSRV);
-	particlesSRV.push_back(particleSRV);
-
 	ID3D11ShaderResourceView* sortSRV;
 	device->CreateShaderResourceView(sortDataBuffers[index], nullptr, &sortSRV);
 	sortDataSRV.push_back(sortSRV);
-
-	D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-	uavDesc.Format = DXGI_FORMAT_UNKNOWN;
-	uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-	uavDesc.Buffer = D3D11_BUFFER_UAV{
-		0,
-		(UINT)systems[0]->maxParticles,
-		0
-	};
-
-	ID3D11UnorderedAccessView* particleUAV;
-	device->CreateUnorderedAccessView(particlesBuffers[index], &uavDesc, &particleUAV);
-	particlesUAV.push_back(particleUAV);
 
 	ID3D11UnorderedAccessView* sortUAV;
 	device->CreateUnorderedAccessView(sortDataBuffers[index], &uavDesc, &sortUAV);
 	sortDataUAV.push_back(sortUAV);
 
-	//Create sort constant buffer
+	//Create sort shader constant buffer
 	D3D11_BUFFER_DESC constant_buffer_desc = {};
 	constant_buffer_desc.ByteWidth = sizeof(CB);
 	constant_buffer_desc.Usage = D3D11_USAGE_DEFAULT;
@@ -223,7 +229,7 @@ void ParticleSystemComponent::Draw(ID3D11DeviceContext* context)
 		context->VSSetShaderResources(0, 1, &particlesSRV[i]);
 		context->VSSetShaderResources(1, 1, &sortDataSRV[i]);
 
-		context->DrawIndexedInstancedIndirect(argsBuffers[i], (UINT) argsBuffers[i] - (UINT) argsBuffers[0]);
+		context->DrawIndexedInstancedIndirect(argsBuffers[i], 0);//(UINT) argsBuffers[i] - (UINT) argsBuffers[0]);
 	}
 }
 

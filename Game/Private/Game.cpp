@@ -368,8 +368,8 @@ void Game::PrepareParticles()
 	float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	context->OMSetBlendState(blendState, blendFactors, 0xffffffff);
 
-	particleSystems.properties.ViewMatrix = camManager->viewMatrix;
-	particleSystems.properties.ProjectionMatrix = camManager->projectionMatrix;
+	particleSystems.properties.ViewMatrix = camManager->viewMatrix.Transpose();
+	particleSystems.properties.ProjectionMatrix = camManager->projectionMatrix.Transpose();
 }
 
 void Game::Update(float deltaTime) {

@@ -271,7 +271,7 @@ float4 PSMain( PS_IN input ) : SV_Target
 		shadow *= CalcShadowFactor(shadowSampler, shadowMap, objSampler, shadowTexture, posS, layer);
 
 		if (shadow.a < 1.0f)
-			shadow = shadowTexture.Sample(objSampler, float2(abs((int)posW.x) % 200 / 200.0f, abs((int)posW.z) % 200 / 200.0f));
+			shadow = shadowTexture.Sample(objSampler, float2(frac(posW.x * 0.01f), frac(posW.z * 0.01f)));
 
 		ComputeDirectionalLight(difColor, specColor, dirLight, norm.xyz, eyeVec.xyz, amb, dif, spec);
 

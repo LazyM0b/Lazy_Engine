@@ -50,9 +50,7 @@ PS_IN VSMain(uint VertexID: SV_VertexID)
 
     Particle pin = particlePool[index];
 
-    float4 position = mul(pin.pos,View);
-    position = mul(position, Projection);
-    vout.pos = position;
+    vout.pos = pin.pos;
 
     uint corner = VertexID % 4;
 
@@ -81,7 +79,10 @@ PS_IN VSMain(uint VertexID: SV_VertexID)
     {
         vout.pos += float4(-pin.size.x, pin.size.y, 0.0f, 0.0f);
     }
-
+    
+    vout.pos = mul(vout.pos, View);
+    vout.pos = mul(vout.pos, Projection);
+    vout.pos.z /= 80000.0f;
     vout.color = pin.color;
 
     return vout;
@@ -90,7 +91,7 @@ PS_IN VSMain(uint VertexID: SV_VertexID)
 float4 PSMain( PS_IN input) : SV_TARGET
 {
     float4 pout = input.color;
-    pout /= 10.0f;
+   // pout /= 10.0f;
 
     return pout;
 }
