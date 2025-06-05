@@ -178,7 +178,7 @@ void Game::Run() {
 
 		Update(deltaTime);
 		
-		//SHADOWS
+		//Render shadow maps
 		BuildShadowTransform();
 
 		context->ClearState();
@@ -188,10 +188,10 @@ void Game::Run() {
 		CullBackward();
 
 		DrawSceneToShadowMap();
-		//END
 
 		context->ClearState();
 
+		//Deferred rendering opaque pass
 		PrepareOpaque();
 
 		//renderingSystem.PrepareFrame();
@@ -207,6 +207,7 @@ void Game::Run() {
 
 		context->ClearState();
 
+		//Deferred rendering lighting pass
 		PrepareLighting();
 
 		RestoreTargets(1, &renderView, depthStencilView);
@@ -217,6 +218,34 @@ void Game::Run() {
 
 		context->ClearState();
 
+		//Render particles
+		context->OMSetRenderTargets(1, &renderView, depthStencilView);
+
+		PrepareParticles();
+
+		particleSystems.SortParticles(context, shaders);
+
+		particleSystems.EmitParticles(deltaTime, context);
+
+		shaders->EmitParticles(context);
+
+		particleSystems.UpdateSystems(deltaTime, context);
+
+		context->CSSetShaderResources(1, 1, shadowMaps[0]->GetDepthMapSRV().GetAddressOf());
+
+		shaders->UpdateParticles(context);
+
+		//particleSystems.ConsumeParticles(context);
+
+		//shaders->ConsumeParticles(context);
+
+		shaders->DrawParticles(context);
+
+		particleSystems.Draw(context);
+
+		context->ClearState();
+
+		//Render transparent objects
 		PrepareTransparent();
 
 		context->OMSetRenderTargets(1, &renderView, depthStencilView);
@@ -224,18 +253,6 @@ void Game::Run() {
 		shaders->DrawTransparent(context);
 
 		renderingSystem->DrawTransparent(context, objects, mapSize);
-
-		context->ClearState();
-
-		context->OMSetRenderTargets(1, &renderView, depthStencilView);
-
-		PrepareParticles();
-
-		particleSystems.SortParticles(context, shaders);
-
-		shaders->DrawParticles(context);
-
-		particleSystems.Draw(context);
 
 		swapChain->Present(0, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
 
@@ -368,8 +385,8 @@ void Game::PrepareParticles()
 	float blendFactors[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	context->OMSetBlendState(blendState, blendFactors, 0xffffffff);
 
-	particleSystems.properties.ViewMatrix = camManager->viewMatrix.Transpose();
-	particleSystems.properties.ProjectionMatrix = camManager->projectionMatrix.Transpose();
+	particleSystems.worldProperties.ViewMatrix = (camManager->viewMatrix * camManager->projectionMatrix).Transpose();
+	particleSystems.worldProperties.ProjectionMatrix = (camManager->Mat).Transpose();
 }
 
 void Game::Update(float deltaTime) {

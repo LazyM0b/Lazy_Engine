@@ -149,5 +149,8 @@
     <None Include="Shaders\ComputeShaderSort.hlsl">
       <Filter>Source Files\Shaders</Filter>
     </None>
+    <None Include="Shaders\ParticleComputeShaders.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

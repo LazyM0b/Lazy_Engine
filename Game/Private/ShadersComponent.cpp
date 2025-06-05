@@ -404,14 +404,14 @@ int ShadersComponent::Initialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 	ID3DBlob* errorComputeCode = nullptr;
 
 	//create particles compute shader
-	res = D3DCompileFromFile(L"./Shaders/FountainShader.hlsl",
+	res = D3DCompileFromFile(L"./Shaders/ParticleComputeShaders.hlsl",
 		Shader_Macros /*macros*/,
 		nullptr /*include*/,
-		"CSMain",
+		"CSInit",
 		"cs_5_0",
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0,
-		&particlesComputeShaderByteCode,
+		&particlesInitShaderByteCode,
 		&errorComputeCode);
 
 	if (FAILED(res)) {
@@ -431,9 +431,105 @@ int ShadersComponent::Initialize(HWND hWindow, Microsoft::WRL::ComPtr<ID3D11Devi
 	}
 
 	device->CreateComputeShader(
-		particlesComputeShaderByteCode->GetBufferPointer(),
-		particlesComputeShaderByteCode->GetBufferSize(),
-		nullptr, &particlesComputeShader);
+		particlesInitShaderByteCode->GetBufferPointer(),
+		particlesInitShaderByteCode->GetBufferSize(),
+		nullptr, &particlesInitShader);
+
+	//create particles emit shader
+	res = D3DCompileFromFile(L"./Shaders/ParticleComputeShaders.hlsl",
+		Shader_Macros /*macros*/,
+		nullptr /*include*/,
+		"CSEmit",
+		"cs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&particlesEmitShaderByteCode,
+		&errorComputeCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorComputeCode) {
+			char* compileErrors = (char*)(errorComputeCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"FountainShader.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreateComputeShader(
+		particlesEmitShaderByteCode->GetBufferPointer(),
+		particlesEmitShaderByteCode->GetBufferSize(),
+		nullptr, &particlesEmitShader);
+
+	//create particles update shader
+	res = D3DCompileFromFile(L"./Shaders/ParticleComputeShaders.hlsl",
+		Shader_Macros /*macros*/,
+		nullptr /*include*/,
+		"CSUpdate",
+		"cs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&particlesUpdateShaderByteCode,
+		&errorComputeCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorComputeCode) {
+			char* compileErrors = (char*)(errorComputeCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"FountainShader.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreateComputeShader(
+		particlesUpdateShaderByteCode->GetBufferPointer(),
+		particlesUpdateShaderByteCode->GetBufferSize(),
+		nullptr, &particlesUpdateShader);
+
+	//create particles update shader
+	res = D3DCompileFromFile(L"./Shaders/ParticleComputeShaders.hlsl",
+		Shader_Macros /*macros*/,
+		nullptr /*include*/,
+		"CSConsume",
+		"cs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0,
+		&particlesConsumeShaderByteCode,
+		&errorComputeCode);
+
+	if (FAILED(res)) {
+		// If the shader failed to compile it should have written something to the error message.
+		if (errorComputeCode) {
+			char* compileErrors = (char*)(errorComputeCode->GetBufferPointer());
+
+			std::cout << compileErrors << std::endl;
+		}
+		// If there was  nothing in the error message then it simply could not find the shader file itself.
+		else
+		{
+			MessageBox(hWindow, L"FountainShader.hlsl", L"Missing Shader File", MB_OK);
+		}
+
+		return 0;
+	}
+
+	device->CreateComputeShader(
+		particlesConsumeShaderByteCode->GetBufferPointer(),
+		particlesConsumeShaderByteCode->GetBufferSize(),
+		nullptr, &particlesConsumeShader);
 
 
 	//create particles compute sort shader
@@ -559,6 +655,49 @@ void ShadersComponent::DrawTransparent(ID3D11DeviceContext* context)
 	context->PSSetSamplers(1, 1, &shadowSampler);
 }
 
+void ShadersComponent::InitParticleSystems(ID3D11DeviceContext* context)
+{
+	context->CSSetShader(particlesInitShader, nullptr, 0);
+
+	context->Dispatch(32, 24, 1);
+
+	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
+	context->CSSetUnorderedAccessViews(2, 1, &pViewnullptr, nullptr);
+}
+
+void ShadersComponent::EmitParticles(ID3D11DeviceContext* context)
+{
+	context->CSSetShader(particlesEmitShader, nullptr, 0);
+
+	context->Dispatch(32, 24, 1);
+
+	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
+	context->CSSetUnorderedAccessViews(1, 1, &pViewnullptr, nullptr);
+	context->CSSetUnorderedAccessViews(3, 1, &pViewnullptr, nullptr);
+}
+
+void ShadersComponent::UpdateParticles(ID3D11DeviceContext* context)
+{
+	context->CSSetShader(particlesUpdateShader, nullptr, 0);
+
+	context->Dispatch(32, 24, 1);
+
+	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
+	context->CSSetUnorderedAccessViews(0, 1, &pViewnullptr, nullptr);
+	context->CSSetUnorderedAccessViews(2, 1, &pViewnullptr, nullptr);
+}
+
+void ShadersComponent::ConsumeParticles(ID3D11DeviceContext* context)
+{
+	context->CSSetShader(particlesConsumeShader, nullptr, 0);
+
+	context->Dispatch(32, 24, 1);
+
+	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
+	context->CSSetUnorderedAccessViews(2, 1, &pViewnullptr, nullptr);
+	context->CSSetUnorderedAccessViews(3, 1, &pViewnullptr, nullptr);
+}
+
 void ShadersComponent::DrawParticles(ID3D11DeviceContext* context)
 {
 	context->RSSetState(rastState);
@@ -566,7 +705,6 @@ void ShadersComponent::DrawParticles(ID3D11DeviceContext* context)
 	//context->IASetInputLayout(particlesLayout);
 	context->VSSetShader(particlesVertexShader, nullptr, 0);
 	context->PSSetShader(particlesPixelShader, nullptr, 0);
-	context->CSSetShader(particlesComputeShader, nullptr, 0);
 }
 
 void ShadersComponent::SortParticles(ID3D11DeviceContext* context)

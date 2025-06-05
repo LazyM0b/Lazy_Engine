@@ -29,4 +29,5 @@ public:
 	Quaternion cameraRotation;
 	Matrix viewMatrix;
 	Matrix projectionMatrix;
+	Matrix Mat;
 };

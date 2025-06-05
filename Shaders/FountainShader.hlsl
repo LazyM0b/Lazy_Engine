@@ -12,11 +12,6 @@ struct Particle
     float weight;
 };
 
-struct DeadData
-{
-    uint index;
-};
-
 struct SortData
 {
     float rangeSq;
@@ -33,8 +28,6 @@ struct PS_IN
 
 StructuredBuffer<Particle> particlePool : register(t0);
 StructuredBuffer<SortData> sortList : register(t1);
-ConsumeStructuredBuffer<DeadData> deadListIn: register(u2);
-AppendStructuredBuffer<DeadData> deadListOut: register(u3);
 
 cbuffer Params : register(b0)
 {
@@ -46,42 +39,66 @@ PS_IN VSMain(uint VertexID: SV_VertexID)
 {
     PS_IN vout;
 
-    uint index = sortList[VertexID / 4].index;
+    uint index = sortList[VertexID / 8].index;
 
     Particle pin = particlePool[index];
 
     vout.pos = pin.pos;
 
-    uint corner = VertexID % 4;
+    uint corner = VertexID % 8;
 
     //float pSize = lerp(pin.size.x, pin.size.y, saturate(1.0f - pin.LifeTime / pin.MaxLifeTime));
 
     [flatten]
     if (corner == 0)
     {
-        vout.pos += float4(pin.size.x, pin.size.y, 0.0f, 0.0f);
+        vout.pos += float4(pin.size.x, 0.0f, 0.0f, 0.0f);
     }
 
     [flatten]
     if (corner == 1)
     {
-        vout.pos += float4(-pin.size.x, -pin.size.y, 0.0f, 0.0f);
+        vout.pos += float4(-pin.size.x,0.0f, 0.0f, 0.0f);
     }
 
     [flatten]
     if (corner == 2)
     {
-        vout.pos += float4(pin.size.x, -pin.size.y, 0.0f, 0.0f);
+        vout.pos += float4(0.0f, -pin.size.y, 0.0f, 0.0f);
     }
 
     [flatten]
     if (corner == 3)
     {
-        vout.pos += float4(-pin.size.x, pin.size.y, 0.0f, 0.0f);
+        vout.pos += float4(0.0f, pin.size.y, 0.0f, 0.0f);
+    }
+
+    [flatten]
+    if (corner == 4)
+    {
+        vout.pos += float4(0.0f, 0.0f, pin.size.x, 0.0f);
+    }
+
+    [flatten]
+    if (corner == 5)
+    {
+        vout.pos += float4(0.0f, 0.0f, -pin.size.x, 0.0f);
+    }
+
+    [flatten]
+    if (corner == 6)
+    {
+        vout.pos += float4(0.0f, -pin.size.y, 0.0f, 0.0f);
+    }
+
+    [flatten]
+    if (corner == 7)
+    {
+        vout.pos += float4(0.0f, pin.size.y, 0.0f, 0.0f);
     }
     
+    //vout.pos = mul(vout.pos, Projection);
     vout.pos = mul(vout.pos, View);
-    vout.pos = mul(vout.pos, Projection);
     vout.pos.z /= 80000.0f;
     vout.color = pin.color;
 
@@ -94,10 +111,4 @@ float4 PSMain( PS_IN input) : SV_TARGET
    // pout /= 10.0f;
 
     return pout;
-}
-
-[numthreads(BITONIC_BLOCK_SIZE, 1, 1)]
-void CSMain(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupThreadID, uint3 dispatchThreadID : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
-{
-    
 }

@@ -26,7 +26,7 @@ struct Particle
 	float weight;
 };
 
-struct ParticleProps
+struct ParticleWorldProps
 {
 	Matrix ViewMatrix;
 	Matrix ProjectionMatrix;
@@ -38,12 +38,25 @@ struct SortData
 	float distance;
 };
 
+struct DeadData
+{
+	UINT index;
+};
+
 struct CB
 {
 	UINT iLevel;
 	UINT iLevelMask;
 	UINT iWidth;
 	UINT iHeight;
+};
+
+struct ParticleSystemProps
+{
+	int groupsCnt;
+	UINT maxParticles;
+	float deltaTime;
+	float initialLifeTime;
 };
 
 enum ParticleSystemType: UINT8
@@ -77,6 +90,7 @@ public:
 	ParticleSystemType systemType;
 	std::vector <Particle>* particleList;
 	int maxParticles;
+	int curSecondParticles;
 	int numParticles;
 	Vector4 origin;
 	Vector3 force;
@@ -92,9 +106,12 @@ class ParticleSystemComponent
 {
 public:
 	std::vector<ParticleSystem> particleSystems;
-	void InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, size_t index);
-	void AddParticleSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ParticleSystemType type, UINT particlesNum, Vector4 spawnPoint);
+	void InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, size_t index);
+	void AddParticleSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, ParticleSystemType type, UINT particlesNum, Vector4 spawnPoint);
 	void PrepareParticleSystems(ID3D11DeviceContext* context, size_t index);
+	void EmitParticles(float DeltaTime, ID3D11DeviceContext* context);
+	void UpdateSystems(float DeltaTime, ID3D11DeviceContext* context);
+	void ConsumeParticles(ID3D11DeviceContext* context);
 	void Draw(ID3D11DeviceContext* context);
 	void SortParticles(ID3D11DeviceContext* context, ShadersComponent* shaders);
 	void SetConstants(ID3D11DeviceContext* context, UINT iLevel, UINT iLevelMask, UINT iWidth, UINT iHeight);
@@ -109,6 +126,13 @@ public:
 	std::vector<ID3D11Buffer*> sortDataBuffers;
 	std::vector<ID3D11ShaderResourceView*> sortDataSRV;
 	std::vector<ID3D11UnorderedAccessView*> sortDataUAV;
+	std::vector<ID3D11UnorderedAccessView*> sortDataAppendUAV;
+
+	std::vector<ID3D11Buffer*> deadDataBuffers;
+	std::vector<ID3D11UnorderedAccessView*> deadDataUAV;
+
+	std::vector<ParticleSystemProps> particlesProperties;
+	std::vector<ID3D11Buffer*> particlesPropsBuffers;
 
 	std::vector<ID3D11Buffer*> indexBuffers;
 	std::vector<ID3D11Buffer*> argsBuffers;
@@ -116,8 +140,9 @@ public:
 	ID3D11Buffer* constSortBuffer;
 
 	ID3D11Buffer* propsBuffer;
-	ParticleProps properties;
+	ParticleWorldProps worldProperties;
 
+	std::vector<UINT> particlesCnt;
 	UINT particleStrides;
 	UINT particleOffsets;
 };

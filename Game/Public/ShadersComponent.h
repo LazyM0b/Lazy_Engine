@@ -15,7 +15,11 @@ public:
 	void DrawOpaque(ID3D11DeviceContext* context);
 	void DrawLighting(ID3D11DeviceContext* context);
 	void DrawTransparent(ID3D11DeviceContext* context);
+	void InitParticleSystems(ID3D11DeviceContext* context);
+	void EmitParticles(ID3D11DeviceContext* context);
+	void UpdateParticles(ID3D11DeviceContext* context);
 	void DrawParticles(ID3D11DeviceContext* context);
+	void ConsumeParticles(ID3D11DeviceContext* context);
 	void SortParticles(ID3D11DeviceContext* context);
 	void TransposeParticles(ID3D11DeviceContext* context);
 
@@ -46,8 +50,16 @@ public:
 	ID3DBlob* particlesVertexShaderByteCode;
 	ID3D11PixelShader* particlesPixelShader;
 	ID3DBlob* particlesPixelShaderByteCode;
-	ID3D11ComputeShader* particlesComputeShader;
-	ID3DBlob* particlesComputeShaderByteCode;
+
+	ID3D11ComputeShader* particlesInitShader;
+	ID3DBlob* particlesInitShaderByteCode;
+	ID3D11ComputeShader* particlesEmitShader;
+	ID3DBlob* particlesEmitShaderByteCode;
+	ID3D11ComputeShader* particlesUpdateShader;
+	ID3DBlob* particlesUpdateShaderByteCode;
+	ID3D11ComputeShader* particlesConsumeShader;
+	ID3DBlob* particlesConsumeShaderByteCode;
+
 	ID3D11ComputeShader* particlesComputeSortShader;
 	ID3DBlob* particlesComputeSortShaderByteCode;
 	ID3D11ComputeShader* particlesComputeTransposeShader;

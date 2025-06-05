@@ -13,13 +13,14 @@ CameraManager::CameraManager(float dist)
 void CameraManager::SetCameraView(Vector3 objPos, Vector3 camPos)
 {
 	objectPos = objPos;
-
+	Mat =Matrix::CreateFromYawPitchRoll(Vector3(acos(camPos.x / distance), asin(camPos.y / distance), asin(camPos.z / distance)));
 	cameraPos = Vector3::Transform(camPos, cameraRotation) + objectPos;
 	distance = Vector3::Distance(cameraPos, objectPos);
 
 	if (objectPos == cameraPos)
 		cameraPos.z -= 1.0f;
 	viewMatrix = Matrix::CreateLookAt(cameraPos, objectPos, Vector3::Up);
+	cameraRotation = Quaternion::CreateFromYawPitchRoll(camPos / distance);
 }
 
 void CameraManager::RotateCamera(Quaternion rotVector)
