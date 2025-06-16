@@ -107,6 +107,6 @@ void CameraManager::UpdatePos(InputDevice* input, const Vector3& objPos,UINT wid
 void CameraManager::Initialize(float aspectRatio, int FOV /*= 1.57f*/)
 {
 	float nearPlane = 0.5f;
-	float farPlane = 250000.0f;
+	float farPlane = 20000.0f;
 	projectionMatrix = Matrix::CreatePerspectiveFieldOfView(FOV, aspectRatio, nearPlane, farPlane);
 }

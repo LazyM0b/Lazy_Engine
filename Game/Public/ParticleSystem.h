@@ -16,8 +16,10 @@ struct Particle
 {
 	Vector4 color;
 	Vector4 colorDelta;
+	Vector4 origin;
 	Vector4 pos;
 	Vector4 prevPos;
+	Vector3 initialVelocity;
 	Vector3 velocity;
 	Vector3 acceleration;
 	Vector2 size;
@@ -34,12 +36,16 @@ struct ParticleWorldProps
 
 struct SortData
 {
+	SortData(): index(0), distance(0.f) {}
+	SortData(int ind, float dist) : index(ind), distance(dist) {}
 	UINT index;
 	float distance;
 };
 
 struct DeadData
 {
+	DeadData(): index(0) {}
+	DeadData(int ind) : index(ind) {}
 	UINT index;
 };
 
@@ -100,19 +106,20 @@ public:
 	//particle system lifetime attributes
 	float timeFromStart;
 	float maxTime;
+	float SpawnRange;
 };
 
 class ParticleSystemComponent
 {
 public:
 	std::vector<ParticleSystem> particleSystems;
-	void InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, size_t index);
-	void AddParticleSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, ParticleSystemType type, UINT particlesNum, Vector4 spawnPoint);
+	UINT InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, size_t index);
+	UINT AddParticleSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, ParticleSystemType type, UINT particlesNum, Vector4 spawnPoint);
 	void PrepareParticleSystems(ID3D11DeviceContext* context, size_t index);
-	void EmitParticles(float DeltaTime, ID3D11DeviceContext* context);
-	void UpdateSystems(float DeltaTime, ID3D11DeviceContext* context);
-	void ConsumeParticles(ID3D11DeviceContext* context);
-	void Draw(ID3D11DeviceContext* context);
+	UINT EmitParticles(float DeltaTime, ID3D11DeviceContext* context, size_t index);
+	UINT UpdateSystems(float DeltaTime, ID3D11DeviceContext* context, size_t index);
+	void ConsumeParticles(ID3D11DeviceContext* context, size_t index);
+	void Draw(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, size_t index);
 	void SortParticles(ID3D11DeviceContext* context, ShadersComponent* shaders);
 	void SetConstants(ID3D11DeviceContext* context, UINT iLevel, UINT iLevelMask, UINT iWidth, UINT iHeight);
 
@@ -123,11 +130,15 @@ public:
 	std::vector<ID3D11ShaderResourceView*> particlesSRV;
 	std::vector<ID3D11UnorderedAccessView*> particlesUAV;
 
+	std::vector<SortData> depthsData;
 	std::vector<ID3D11Buffer*> sortDataBuffers;
 	std::vector<ID3D11ShaderResourceView*> sortDataSRV;
 	std::vector<ID3D11UnorderedAccessView*> sortDataUAV;
 	std::vector<ID3D11UnorderedAccessView*> sortDataAppendUAV;
+	std::vector<ID3D11Buffer*> sortDataConsumeBuffers;
+	std::vector<ID3D11UnorderedAccessView*> sortDataConsumeUAV;
 
+	std::vector <DeadData> deadData;
 	std::vector<ID3D11Buffer*> deadDataBuffers;
 	std::vector<ID3D11UnorderedAccessView*> deadDataUAV;
 
@@ -145,4 +156,5 @@ public:
 	std::vector<UINT> particlesCnt;
 	UINT particleStrides;
 	UINT particleOffsets;
+	bool isEmitted;
 };

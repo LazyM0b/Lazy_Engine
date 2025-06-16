@@ -74,6 +74,7 @@ public:
 	ID3D11Texture2D* depthStencilBuffer;
 	ID3D11RenderTargetView* renderView;
 	ID3D11DepthStencilView* depthStencilView; 
+	ID3D11ShaderResourceView* depthSRV;
 	ID3D11BlendState* blendState;
 
 	//LIGHT

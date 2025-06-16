@@ -655,45 +655,51 @@ void ShadersComponent::DrawTransparent(ID3D11DeviceContext* context)
 	context->PSSetSamplers(1, 1, &shadowSampler);
 }
 
-void ShadersComponent::InitParticleSystems(ID3D11DeviceContext* context)
+void ShadersComponent::InitParticleSystems(ID3D11DeviceContext* context, UINT GroupsCnt)
 {
 	context->CSSetShader(particlesInitShader, nullptr, 0);
 
-	context->Dispatch(32, 24, 1);
+	context->Dispatch(GroupsCnt, GroupsCnt, 1);
 
 	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
-	context->CSSetUnorderedAccessViews(2, 1, &pViewnullptr, nullptr);
-}
-
-void ShadersComponent::EmitParticles(ID3D11DeviceContext* context)
-{
-	context->CSSetShader(particlesEmitShader, nullptr, 0);
-
-	context->Dispatch(32, 24, 1);
-
-	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
-	context->CSSetUnorderedAccessViews(1, 1, &pViewnullptr, nullptr);
 	context->CSSetUnorderedAccessViews(3, 1, &pViewnullptr, nullptr);
 }
 
-void ShadersComponent::UpdateParticles(ID3D11DeviceContext* context)
+void ShadersComponent::EmitParticles(ID3D11DeviceContext* context, UINT GroupsCnt)
 {
-	context->CSSetShader(particlesUpdateShader, nullptr, 0);
+	context->CSSetShader(particlesEmitShader, nullptr, 0);
 
-	context->Dispatch(32, 24, 1);
+	if (GroupsCnt > 0)
+		context->Dispatch(GroupsCnt, GroupsCnt, 1);
 
 	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
-	context->CSSetUnorderedAccessViews(0, 1, &pViewnullptr, nullptr);
-	context->CSSetUnorderedAccessViews(2, 1, &pViewnullptr, nullptr);
+	context->CSSetUnorderedAccessViews(1, 1, &pViewnullptr, nullptr);
+	context->CSSetUnorderedAccessViews(4, 1, &pViewnullptr, nullptr);
 }
 
-void ShadersComponent::ConsumeParticles(ID3D11DeviceContext* context)
+void ShadersComponent::UpdateParticles(ID3D11DeviceContext* context, UINT GroupsCnt)
+{
+	context->CSSetShader(particlesUpdateShader, nullptr, 0);
+	context->CSSetSamplers(0, 1, &textureSampler);
+
+	if (GroupsCnt > 0)
+		context->Dispatch(GroupsCnt, GroupsCnt, 1);
+
+	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
+	ID3D11ShaderResourceView* pSRVnullptr = nullptr;
+	context->CSSetUnorderedAccessViews(0, 1, &pViewnullptr, nullptr);
+	context->CSSetShaderResources(0, 1, &pSRVnullptr);
+}
+
+void ShadersComponent::ConsumeParticles(ID3D11DeviceContext* context, UINT GroupsCnt)
 {
 	context->CSSetShader(particlesConsumeShader, nullptr, 0);
 
-	context->Dispatch(32, 24, 1);
+	context->Dispatch(GroupsCnt, GroupsCnt, 1);
 
 	ID3D11UnorderedAccessView* pViewnullptr = nullptr;
+	context->CSSetUnorderedAccessViews(0, 1, &pViewnullptr, nullptr);
+	context->CSSetUnorderedAccessViews(1, 1, &pViewnullptr, nullptr);
 	context->CSSetUnorderedAccessViews(2, 1, &pViewnullptr, nullptr);
 	context->CSSetUnorderedAccessViews(3, 1, &pViewnullptr, nullptr);
 }

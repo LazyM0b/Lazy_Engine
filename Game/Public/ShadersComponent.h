@@ -15,11 +15,11 @@ public:
 	void DrawOpaque(ID3D11DeviceContext* context);
 	void DrawLighting(ID3D11DeviceContext* context);
 	void DrawTransparent(ID3D11DeviceContext* context);
-	void InitParticleSystems(ID3D11DeviceContext* context);
-	void EmitParticles(ID3D11DeviceContext* context);
-	void UpdateParticles(ID3D11DeviceContext* context);
+	void InitParticleSystems(ID3D11DeviceContext* context, UINT GroupsCnt);
+	void EmitParticles(ID3D11DeviceContext* context, UINT GroupsCnt);
+	void UpdateParticles(ID3D11DeviceContext* context, UINT GroupsCnt);
 	void DrawParticles(ID3D11DeviceContext* context);
-	void ConsumeParticles(ID3D11DeviceContext* context);
+	void ConsumeParticles(ID3D11DeviceContext* context, UINT GroupsCnt);
 	void SortParticles(ID3D11DeviceContext* context);
 	void TransposeParticles(ID3D11DeviceContext* context);
 

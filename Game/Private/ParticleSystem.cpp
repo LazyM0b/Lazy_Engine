@@ -3,7 +3,9 @@
 
 ParticleSystem::ParticleSystem(ParticleSystemType type, UINT particlesNum, Vector4 spawnPoint):  systemType(type), maxParticles(particlesNum), origin(spawnPoint) 
 {
-	emissionRate = 1000.0f;
+	emissionRate = 10000.0f;
+	maxTime = 5.0f;
+	SpawnRange = 100.0f;
 }
 
 void ParticleSystem::Update(float deltaTime)
@@ -34,10 +36,13 @@ void ParticleSystem::InitSystem()
 void ParticleSystem::InitParticle(int index)
 {
 	Particle* particle = &(*particleList)[index];
-	particle->pos = Vector4((rand() % 100 - 50) / 10.0f * 10.0f, (rand() % 100) / 100.0f * 10.0f + 500.0f, (rand() % 100 - 50) / 100.0f * 10.0f, 1.0f);
-	particle->velocity = Vector3((rand() % 80 - 40) / 50.0f, (rand() % 100) / -50.0f, (rand() % 80 - 40) / 50.0f);
+	particle->origin = Vector4((rand() % int(SpawnRange * 2) - SpawnRange) + origin.x, (rand() % int(SpawnRange * 2) - SpawnRange) + origin.y, (rand() % int(SpawnRange * 2) - SpawnRange) + origin.z, 1.0f);
+	particle->pos = particle->origin;
+	particle->initialVelocity = Vector3((rand() % 80 - 40) * 1.0f, (rand() % 10 + 10) * 1.0f, (rand() % 80 - 40) * 1.0f);
+	particle->velocity = particle->initialVelocity;
 	particle->acceleration = Vector3(0.0f, -0.1f, 0.0f);
 	particle->color = Vector4((rand() % 100) / 100.0f, (rand() % 100) / 100.0f, (rand() % 100) / 100.0f, (rand() % 100) / 100.0f);
+	particle->lifeTime = maxTime;
 	float tmp = (rand() % 50 + 50) / 100.0f * 10.0f;
 	particle->size = Vector2(tmp, tmp);
 }
@@ -49,19 +54,21 @@ int ParticleSystem::Emit(int numParticles)
 	return 0;
 }
 
-void ParticleSystemComponent::AddParticleSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, ParticleSystemType type, UINT particlesNum, Vector4 spawnPoint)
+UINT ParticleSystemComponent::AddParticleSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, ParticleSystemType type, UINT particlesNum, Vector4 spawnPoint)
 {
 	systems.push_back(new ParticleSystem(type, particlesNum, spawnPoint));
 	particlesProperties.push_back(ParticleSystemProps());
 	particlesCnt.push_back(0);
-	InitializeSystem(device, context, systems.size() - 1);
+	return InitializeSystem(device, context, systems.size() - 1);
 }
 
-void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, size_t index)
+UINT ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, size_t index)
 {
 	systems[index]->InitSystem();
 	particlesProperties[index].groupsCnt = (systems[index]->maxParticles % 768 != 0) ? ((systems[index]->maxParticles / 768) + 1) : (systems[index]->maxParticles / 768);
+	particlesProperties[index].groupsCnt = ceil(pow(particlesProperties[index].groupsCnt, 0.5f));
 	particlesProperties[index].maxParticles = systems[index]->maxParticles;
+	//particlesProperties[index].originPos = systems[index]->origin;
 
 	D3D11_BUFFER_DESC particlePropsBufDesc = {};
 	particlePropsBufDesc.Usage = D3D11_USAGE_DYNAMIC;
@@ -71,18 +78,23 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 	particlePropsBufDesc.StructureByteStride = 0;
 	particlePropsBufDesc.ByteWidth = sizeof(ParticleSystemProps);
 
+	D3D11_SUBRESOURCE_DATA propsData = {};
+	propsData.pSysMem = &particlesProperties[index];
+	propsData.SysMemPitch = 0;
+	propsData.SysMemSlicePitch = 0;
+
 	ID3D11Buffer* particlesPropsBuffer;
-	device->CreateBuffer(&particlePropsBufDesc, nullptr, &particlesPropsBuffer);
+	device->CreateBuffer(&particlePropsBufDesc, &propsData, &particlesPropsBuffer);
 	particlesPropsBuffers.push_back(particlesPropsBuffer);
 
-	D3D11_MAPPED_SUBRESOURCE res = {};
+	//D3D11_MAPPED_SUBRESOURCE res = {};
 	context->CSSetConstantBuffers(0, 1, &particlesPropsBuffers[index]);
-	context->Map(particlesPropsBuffers[index], 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
+	/*context->Map(particlesPropsBuffers[index], 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
 
 	auto dataPtr = reinterpret_cast<float*>(res.pData);
 	memcpy(dataPtr, &particlesProperties[index], sizeof(ParticleSystemProps));
 
-	context->Unmap(particlesPropsBuffers[index], 0);
+	context->Unmap(particlesPropsBuffers[index], 0);*/
 
 	//Init particles buffer, Shader resource view and unordered access view
 	D3D11_BUFFER_DESC particlesBufDesc = {};
@@ -159,7 +171,7 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 		indexList[index].push_back(8 * i + 4);
 
 		indexList[index].push_back(8 * i + 7);
-		indexList[index].push_back(8 * i + 0);
+		indexList[index].push_back(8 * i + 4);
 		indexList[index].push_back(8 * i + 5);
 	}
 
@@ -183,29 +195,6 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 
 	indexBuffers.push_back(indexBuffer);
 
-	D3D11_BUFFER_DESC argsBufferDesc;
-	argsBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	argsBufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
-	argsBufferDesc.CPUAccessFlags = 0;
-	argsBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
-	argsBufferDesc.StructureByteStride = sizeof(DrawArgs);
-	argsBufferDesc.ByteWidth = sizeof(DrawArgs);
-
-	DrawArgs args;
-	args.IndexCountPerInstance = systems[index]->maxParticles * 6;
-	args.InstanceCount = 1;
-	args.StartIndexLocation = 0;
-	args.BaseVertexLocation = 0;
-	args.StartInstanceLocation = 0;
-
-	D3D11_SUBRESOURCE_DATA argsData;
-	argsData.pSysMem = &args;
-
-	ID3D11Buffer* argsBuffer;
-
-	device->CreateBuffer(&argsBufferDesc, &argsData, &argsBuffer);
-	argsBuffers.push_back(argsBuffer);
-
 	D3D11_BUFFER_DESC objectBufDesc = {};
 	objectBufDesc.Usage = D3D11_USAGE_DYNAMIC;
 	objectBufDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -225,14 +214,13 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 	particleDepthBufDesc.StructureByteStride = sizeof(SortData);
 	particleDepthBufDesc.ByteWidth = systems[index]->maxParticles * sizeof(SortData);
 
-	SortData* depthsData = new SortData[systems[index]->maxParticles];
-	for (UINT i = 0; i < systems[index]->maxParticles ; ++i)
+	for (int i = 0; i < systems[index]->maxParticles; ++i)
 	{
-		depthsData[i] = { i, 0.0f };
+		depthsData.push_back(SortData(i, 0.f));
 	}
 
 	D3D11_SUBRESOURCE_DATA initSortData = {};
-	initSortData.pSysMem = depthsData;
+	initSortData.pSysMem = &depthsData.front();
 	initSortData.SysMemPitch = 0;
 	initSortData.SysMemSlicePitch = 0;
 
@@ -240,6 +228,11 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 
 	device->CreateBuffer(&particleDepthBufDesc, &initSortData, &sortDataBuffer);
 	sortDataBuffers.push_back(sortDataBuffer);
+
+	ID3D11Buffer* sortDataConsumeBuffer;
+
+	device->CreateBuffer(&particleDepthBufDesc, &initSortData, &sortDataConsumeBuffer);
+	sortDataConsumeBuffers.push_back(sortDataBuffer);
 
 	ID3D11ShaderResourceView* sortSRV;
 	device->CreateShaderResourceView(sortDataBuffers[index], nullptr, &sortSRV);
@@ -257,6 +250,12 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 	ID3D11UnorderedAccessView* sortUAV;
 	device->CreateUnorderedAccessView(sortDataBuffers[index], &sortUavDesc, &sortUAV);
 	sortDataAppendUAV.push_back(sortUAV);
+
+
+	ID3D11UnorderedAccessView* sortUAV1;
+	device->CreateUnorderedAccessView(sortDataConsumeBuffers[index], &sortUavDesc, &sortUAV1);
+	sortDataConsumeUAV.push_back(sortUAV1);
+
 
 	sortUavDesc.Buffer = D3D11_BUFFER_UAV{
 		0,
@@ -285,10 +284,13 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 	particleDeadBufDesc.StructureByteStride = sizeof(DeadData);
 	particleDeadBufDesc.ByteWidth = systems[index]->maxParticles * sizeof(DeadData);
 
-	DeadData* deadData = new DeadData[systems[index]->maxParticles];
+	for (int i = 0; i < systems[index]->maxParticles; ++i)
+	{
+		deadData.push_back(DeadData(i));
+	}
 
 	D3D11_SUBRESOURCE_DATA initDeadData = {};
-	initDeadData.pSysMem = deadData;
+	initDeadData.pSysMem = &deadData.front();
 	initDeadData.SysMemPitch = 0;
 	initDeadData.SysMemSlicePitch = 0;
 
@@ -311,6 +313,8 @@ void ParticleSystemComponent::InitializeSystem(Microsoft::WRL::ComPtr<ID3D11Devi
 	deadDataUAV.push_back(deadUAV);
 
 	context->CSSetUnorderedAccessViews(3, 1, &deadDataUAV[index], 0);
+
+	return particlesProperties[index].groupsCnt;
 }
 
 void ParticleSystemComponent::PrepareParticleSystems(ID3D11DeviceContext* context, size_t index)
@@ -318,49 +322,67 @@ void ParticleSystemComponent::PrepareParticleSystems(ID3D11DeviceContext* contex
 
 }
 
-void ParticleSystemComponent::EmitParticles(float DeltaTime, ID3D11DeviceContext* context)
+UINT ParticleSystemComponent::EmitParticles(float DeltaTime, ID3D11DeviceContext* context, size_t index)
 {
-	for (int i = 0; i < systems.size(); ++i)
-	{
-		context->CSSetUnorderedAccessViews(1, 1, &sortDataAppendUAV[i], 0);
-		context->CSSetUnorderedAccessViews(4, 1, &deadDataUAV[i], 0);
+	//if (isEmitted)
+	//	return 0;
+		if (particlesCnt[index] == systems[index]->emissionRate * systems[index]->maxTime)
+			return 0;
 
-		particlesProperties[i].deltaTime = DeltaTime;
-		particlesProperties[i].maxParticles = DeltaTime * systems[i]->emissionRate;
-		particlesProperties[i].groupsCnt = (particlesProperties[i].maxParticles % 768 != 0) ? ((particlesProperties[i].maxParticles / 768) + 1) : (particlesProperties[i].maxParticles / 768);
-		if (particlesCnt[i] < systems[i]->emissionRate * systems[i]->maxTime)
-			particlesCnt[i] += particlesProperties[i].maxParticles;
-	}
+		float deltaParticlesCnt = systems[index]->emissionRate * DeltaTime;
+		if (particlesCnt[index] + deltaParticlesCnt > systems[index]->emissionRate * systems[index]->maxTime)
+			deltaParticlesCnt = systems[index]->emissionRate * systems[index]->maxTime - particlesCnt[index];
+		particlesProperties[index].deltaTime = DeltaTime;
+		particlesProperties[index].maxParticles = deltaParticlesCnt;
+		particlesProperties[index].groupsCnt = (particlesProperties[index].maxParticles % 768 != 0) ? ((particlesProperties[index].maxParticles / 768) + 1) : (particlesProperties[index].maxParticles / 768);
+		particlesProperties[index].groupsCnt = ceil(pow(particlesProperties[index].groupsCnt, 0.5f));
+		particlesCnt[index] += particlesProperties[index].maxParticles;
+		//isEmitted = true;
+
+		context->CSSetUnorderedAccessViews(1, 1, &sortDataAppendUAV[index], 0);
+		context->CSSetUnorderedAccessViews(4, 1, &deadDataUAV[index], 0);
+
+	return particlesProperties[index].groupsCnt;
 }
 
-void ParticleSystemComponent::UpdateSystems(float DeltaTime, ID3D11DeviceContext* context)
+UINT ParticleSystemComponent::UpdateSystems(float DeltaTime, ID3D11DeviceContext* context, size_t index)
 {
-	for (int i = 0; i < systems.size(); ++i)
-	{
-		context->VSSetConstantBuffers(0, 1, &propsBuffer);
-		context->CSSetUnorderedAccessViews(0, 1, &particlesUAV[i], 0);
-		context->CSSetShaderResources(0, 1, &sortDataSRV[i]);
+	particlesProperties[index].deltaTime = DeltaTime;
+	particlesProperties[index].initialLifeTime = systems[index]->maxTime;
+	particlesProperties[index].maxParticles = particlesCnt[index];
+	particlesProperties[index].groupsCnt = (particlesProperties[index].maxParticles % 768 != 0) ? ((particlesProperties[index].maxParticles / 768) + 1) : (particlesProperties[index].maxParticles / 768);
+	particlesProperties[index].groupsCnt = ceil(pow(particlesProperties[index].groupsCnt, 0.5f));
 
-		particlesProperties[i].deltaTime = DeltaTime;
-		particlesProperties[i].initialLifeTime = 2;
-		particlesProperties[i].maxParticles = systems[i]->maxParticles;
-		particlesProperties[i].groupsCnt = (particlesProperties[i].maxParticles % 768 != 0) ? ((particlesProperties[i].maxParticles / 768) + 1) : (particlesProperties[i].maxParticles / 768);
-	}
+	D3D11_MAPPED_SUBRESOURCE res = {};
+	context->Map(particlesPropsBuffers[index], 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
+
+	auto dataPtr = reinterpret_cast<float*>(res.pData);
+	memcpy(dataPtr, &particlesProperties[index], sizeof(ParticleSystemProps));
+
+	context->Unmap(particlesPropsBuffers[index], 0);
+
+	context->CSSetConstantBuffers(0, 1, &particlesPropsBuffers[index]);
+	context->CSSetConstantBuffers(1, 1, &propsBuffer);
+	context->CSSetUnorderedAccessViews(0, 1, &particlesUAV[index], 0);
+	context->CSSetShaderResources(0, 1, &sortDataSRV[index]);
+
+	return particlesProperties[index].groupsCnt;
 }
 
-void ParticleSystemComponent::ConsumeParticles(ID3D11DeviceContext* context)
+void ParticleSystemComponent::ConsumeParticles(ID3D11DeviceContext* context, size_t index)
 {
-	for (int i = 0; i < systems.size(); ++i)
-	{
-		context->CSSetUnorderedAccessViews(2, 1, &sortDataUAV[i], 0);
-		context->CSSetUnorderedAccessViews(3, 1, &deadDataUAV[i], 0);
-	}
+	context->CSSetConstantBuffers(0, 1, &particlesPropsBuffers[index]);
+	context->CSSetUnorderedAccessViews(0, 1, &particlesUAV[index], 0);
+	context->CSSetUnorderedAccessViews(1, 1, &sortDataAppendUAV[index], 0);
+	context->CSSetUnorderedAccessViews(2, 1, &sortDataConsumeUAV[index], 0);
+	context->CSSetUnorderedAccessViews(3, 1, &deadDataUAV[index], 0);
 }
 
-void ParticleSystemComponent::Draw(ID3D11DeviceContext* context)
+void ParticleSystemComponent::Draw(Microsoft::WRL::ComPtr<ID3D11Device> device, ID3D11DeviceContext* context, size_t index)
 {
 	D3D11_MAPPED_SUBRESOURCE res = {};
 
+	//printf("%d\n", particlesCnt[0]);
 	context->VSSetConstantBuffers(0, 1, &propsBuffer);
 	context->Map(propsBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
 
@@ -371,18 +393,41 @@ void ParticleSystemComponent::Draw(ID3D11DeviceContext* context)
 
 	context->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	for (int i = 0; i < argsBuffers.size(); ++i)
+	for (int i = 0; i < systems.size(); ++i)
 	{
 		context->IASetIndexBuffer(indexBuffers[i], DXGI_FORMAT_R32_UINT, 0);
 		context->VSSetShaderResources(0, 1, &particlesSRV[i]);
 		context->VSSetShaderResources(1, 1, &sortDataSRV[i]);
 
+		D3D11_BUFFER_DESC argsBufferDesc;
+		argsBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+		argsBufferDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+		argsBufferDesc.CPUAccessFlags = 0;
+		argsBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+		argsBufferDesc.StructureByteStride = sizeof(DrawArgs);
+		argsBufferDesc.ByteWidth = sizeof(DrawArgs);
+
 		DrawArgs args;
-		args.IndexCountPerInstance = particlesCnt[i] * 24;
+		args.IndexCountPerInstance = particlesProperties[index].maxParticles * 24;
 		args.InstanceCount = 1;
 		args.StartIndexLocation = 0;
 		args.BaseVertexLocation = 0;
 		args.StartInstanceLocation = 0;
+
+		D3D11_SUBRESOURCE_DATA argsData;
+		argsData.pSysMem = &args;
+
+		ID3D11Buffer* argsBuffer;
+
+		device->CreateBuffer(&argsBufferDesc, &argsData, &argsBuffer);
+		argsBuffers.push_back(argsBuffer);
+
+		/*DrawArgs args;
+		args.IndexCountPerInstance = particlesCnt[i] * 24;
+		args.InstanceCount = 1;
+		args.StartIndexLocation = 0;
+		args.BaseVertexLocation = 0;
+		args.StartInstanceLocation = 0;*/
 
 		/*D3D11_MAPPED_SUBRESOURCE res = {};
 		context->Map(argsBuffers[i], 0, D3D11_MAP_WRITE_DISCARD, 0, &res);
@@ -393,6 +438,7 @@ void ParticleSystemComponent::Draw(ID3D11DeviceContext* context)
 		context->Unmap(argsBuffers[i], 0);*/
 
 		context->DrawIndexedInstancedIndirect(argsBuffers[i], 0);//(UINT) argsBuffers[i] - (UINT) argsBuffers[0]);
+		argsBuffers.pop_back();
 	}
 }
 

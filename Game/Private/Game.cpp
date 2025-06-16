@@ -109,6 +109,7 @@ void Game::PrepareResources() {
 
 	res = device->CreateTexture2D(&depthStencilDesc, 0, &depthStencilBuffer);
 	res = device->CreateDepthStencilView(depthStencilBuffer, 0, &depthStencilView);
+	//device->CreateShaderResourceView(depthStencilBuffer, nullptr, &depthSRV);
 	context->OMSetRenderTargets(1, &renderView, depthStencilView);
 
 	D3D11_BLEND_DESC blendDesc;
@@ -210,7 +211,9 @@ void Game::Run() {
 		//Deferred rendering lighting pass
 		PrepareLighting();
 
-		RestoreTargets(1, &renderView, depthStencilView);
+		context->OMSetRenderTargets(1, &renderView, depthStencilView);
+
+		//RestoreTargets(1, &renderView, depthStencilView);
 
 		shaders->DrawLighting(context);
 
@@ -219,31 +222,32 @@ void Game::Run() {
 		context->ClearState();
 
 		//Render particles
-		context->OMSetRenderTargets(1, &renderView, depthStencilView);
+		//context->OMSetRenderTargets(1, &renderView, depthStencilView);
 
-		PrepareParticles();
+		//PrepareParticles();
 
-		particleSystems.SortParticles(context, shaders);
+		////particleSystems.SortParticles(context, shaders);
 
-		particleSystems.EmitParticles(deltaTime, context);
+		//UINT cnt = particleSystems.EmitParticles(deltaTime, context, 0);
+		//
+		//shaders->EmitParticles(context, cnt);
 
-		shaders->EmitParticles(context);
+		//cnt = particleSystems.UpdateSystems(deltaTime, context, 0);
 
-		particleSystems.UpdateSystems(deltaTime, context);
+		//context->CSSetShaderResources(1, 1, shadowMaps[0]->GetDepthMapSRV().GetAddressOf());
+		//context->CSSetShaderResources(2, 1, renderingSystem->GetSRV(5));
 
-		context->CSSetShaderResources(1, 1, shadowMaps[0]->GetDepthMapSRV().GetAddressOf());
+		//shaders->UpdateParticles(context, cnt);
 
-		shaders->UpdateParticles(context);
+		//particleSystems.ConsumeParticles(context, 0);
 
-		//particleSystems.ConsumeParticles(context);
+		//shaders->ConsumeParticles(context, cnt);
 
-		//shaders->ConsumeParticles(context);
+		//shaders->DrawParticles(context);
 
-		shaders->DrawParticles(context);
+		//particleSystems.Draw(device, context, 0);
 
-		particleSystems.Draw(context);
-
-		context->ClearState();
+		//context->ClearState();
 
 		//Render transparent objects
 		PrepareTransparent();

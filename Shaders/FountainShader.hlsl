@@ -2,8 +2,10 @@ struct Particle
 {
     float4 color;
     float4 colorDelta;
+    float4 origin;
     float4 pos;
     float4 posDelta;
+    float3 initialVelocity;
     float3 velocity;
     float3 acceleration;
     float2 size;
@@ -14,8 +16,8 @@ struct Particle
 
 struct SortData
 {
-    float rangeSq;
     uint index;
+    float rangeSq;
 };
 
 struct PS_IN
@@ -99,7 +101,7 @@ PS_IN VSMain(uint VertexID: SV_VertexID)
     
     //vout.pos = mul(vout.pos, Projection);
     vout.pos = mul(vout.pos, View);
-    vout.pos.z /= 80000.0f;
+    vout.pos.z /= 20000.0f;
     vout.color = pin.color;
 
     return vout;
