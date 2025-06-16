@@ -210,6 +210,8 @@ PS_IN VSMain( VS_IN input)
 	float4 posN = PosH.Load(int3(output.tex, 0));
 	output.pos = float4(output.tex / 1080 * float2(2, -2) + float2(-1, 1), 0, 1);
 	output.pos.z = posN.z / 20000.0f;
+	if (output.pos.z == 0.f)
+		output.pos.z = 1.f;
     //output.pos.z = (output.pos.y + 1) / 2.0f;
 	return output;
 }

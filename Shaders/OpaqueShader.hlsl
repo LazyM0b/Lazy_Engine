@@ -51,7 +51,7 @@ PS_IN VSMain( VS_IN input)
 	PS_IN output = (PS_IN)0;
     output.posW = mul(input.pos, transformW);
     output.posH = mul(output.posW, transformH);
-    output.posH.z /= 20000.0f;
+    //output.posH.z /= 20000.0f;
     output.col = input.col;
     output.tex = input.tex;
     output.norm = mul(input.norm, (float3x3) transformWInvT);

@@ -222,32 +222,32 @@ void Game::Run() {
 		context->ClearState();
 
 		//Render particles
-		//context->OMSetRenderTargets(1, &renderView, depthStencilView);
+		context->OMSetRenderTargets(1, &renderView, depthStencilView);
 
-		//PrepareParticles();
+		PrepareParticles();
 
-		////particleSystems.SortParticles(context, shaders);
+		//particleSystems.SortParticles(context, shaders);
 
-		//UINT cnt = particleSystems.EmitParticles(deltaTime, context, 0);
-		//
-		//shaders->EmitParticles(context, cnt);
+		UINT cnt = particleSystems.EmitParticles(deltaTime, context, 0);
+		
+		shaders->EmitParticles(context, cnt);
 
-		//cnt = particleSystems.UpdateSystems(deltaTime, context, 0);
+		cnt = particleSystems.UpdateSystems(deltaTime, context, 0);
 
-		//context->CSSetShaderResources(1, 1, shadowMaps[0]->GetDepthMapSRV().GetAddressOf());
-		//context->CSSetShaderResources(2, 1, renderingSystem->GetSRV(5));
+		context->CSSetShaderResources(1, 1, shadowMaps[0]->GetDepthMapSRV().GetAddressOf());
+		context->CSSetShaderResources(2, 1, renderingSystem->GetSRV(5));
 
-		//shaders->UpdateParticles(context, cnt);
+		shaders->UpdateParticles(context, cnt);
 
-		//particleSystems.ConsumeParticles(context, 0);
+		particleSystems.ConsumeParticles(context, 0);
 
-		//shaders->ConsumeParticles(context, cnt);
+		shaders->ConsumeParticles(context, cnt);
 
-		//shaders->DrawParticles(context);
+		shaders->DrawParticles(context);
 
-		//particleSystems.Draw(device, context, 0);
+		particleSystems.Draw(device, context, 0);
 
-		//context->ClearState();
+		context->ClearState();
 
 		//Render transparent objects
 		PrepareTransparent();
